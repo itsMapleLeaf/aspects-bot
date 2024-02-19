@@ -2,6 +2,7 @@ import "https://deno.land/x/dotenv@v3.2.2/load.ts"
 import * as Discord from "npm:discord.js"
 import {
 	defineSlashCommand,
+	stringOption,
 	useSlashCommands,
 } from "./discord/slash-command.ts"
 
@@ -18,14 +19,9 @@ useSlashCommands(client, [
 		name: "echo",
 		description: "Echoes your input",
 		options: {
-			input: {
-				description: "The input to echo",
-				type: Discord.ApplicationCommandOptionType.String,
-				required: true,
-			},
+			input: stringOption("The input to echo"),
 		},
 		run: async (options, interaction) => {
-			console.log(options)
 			await interaction.reply(options.input)
 		},
 	}),

@@ -6,73 +6,31 @@ import { NonNullableWhen } from "../types.ts"
 
 export type SlashCommand = {
 	data: Discord.ApplicationCommandData
-	run: (
+	run: (interaction: Discord.ChatInputCommandInteraction) => unknown
+}
+
+export type SlashCommandOption = {
+	data: Omit<
+		Exclude<
+			Discord.ApplicationCommandOptionData,
+			| Discord.ApplicationCommandSubGroupData
+			| Discord.ApplicationCommandSubCommandData
+		>,
+		"name"
+	>
+	getValue: (
+		name: string,
 		interaction: Discord.ChatInputCommandInteraction,
 	) => unknown
 }
 
 type SlashCommandOptionValues<
-	Options extends Record<string, {
-		type: Discord.ApplicationCommandOptionType
-		required?: boolean
-	}>,
+	Options extends Record<string, SlashCommandOption>,
 > = {
 	[K in keyof Options]: NonNullableWhen<
-		Options[K]["required"],
-		SlashCommandOptionValueMap[Options[K]["type"]]
+		Options[K]["data"]["required"],
+		Awaited<ReturnType<Options[K]["getValue"]>>
 	>
-}
-
-type SlashCommandOptionValueMap = {
-	[Discord.ApplicationCommandOptionType.String]: string
-	[Discord.ApplicationCommandOptionType.Integer]: number
-	[Discord.ApplicationCommandOptionType.Number]: number
-	[Discord.ApplicationCommandOptionType.Boolean]: boolean
-	[Discord.ApplicationCommandOptionType.Attachment]: string
-	[Discord.ApplicationCommandOptionType.User]: Discord.User
-	[Discord.ApplicationCommandOptionType.Channel]: Discord.Channel
-	[Discord.ApplicationCommandOptionType.Role]: Discord.Role
-	[Discord.ApplicationCommandOptionType.Mentionable]:
-		| Discord.User
-		| Discord.Role
-	[type: number]: unknown
-}
-
-export function defineSlashCommand<
-	Options extends Record<
-		string,
-		Omit<Discord.ApplicationCommandOptionData, "name">
-	>,
->({ run, ...args }: {
-	name: string
-	description: string
-	options: Options
-	run: (
-		options: SlashCommandOptionValues<Options>,
-		interaction: Discord.ChatInputCommandInteraction,
-	) => unknown
-}): SlashCommand {
-	return {
-		data: {
-			...args,
-			options: Object.entries(args.options).map(([name, option]) => {
-				return { ...option, name } as Discord.ApplicationCommandOptionData
-			}),
-		},
-		run: async (interaction) => {
-			const options: Record<string, SlashCommandOptionValueMap[number]> = {}
-			for (const [name, optionArg] of Object.entries(args.options)) {
-				const option = interaction.options.get(name)
-				if (option === null && "required" in optionArg && optionArg.required) {
-					throw new Error(
-						`Missing required option "${name}" for command "${args.name}"`,
-					)
-				}
-				options[name] = option?.value
-			}
-			await run(options as SlashCommandOptionValues<Options>, interaction)
-		},
-	}
 }
 
 export function useSlashCommands(
@@ -130,4 +88,110 @@ export function useSlashCommands(
 			}
 		}
 	})
+}
+
+export function defineSlashCommand<
+	Options extends Record<string, SlashCommandOption>,
+>({ options, run, ...args }: {
+	name: string
+	description: string
+	options: Options
+	run: (
+		options: SlashCommandOptionValues<Options>,
+		interaction: Discord.ChatInputCommandInteraction,
+	) => unknown
+}): SlashCommand {
+	return {
+		data: {
+			...args,
+			options: Object.entries(options).map(([name, option]) =>
+				({ ...option.data, name }) as Discord.ApplicationCommandOptionData
+			),
+		},
+		run: async (interaction) => {
+			const values: Record<string, unknown> = {}
+			for (const [name, optionArg] of Object.entries(options)) {
+				const value = await optionArg.getValue(name, interaction)
+				if (optionArg.data.required && value == null) {
+					throw new Error(`Missing required option: ${name}`)
+				}
+				values[name] = value
+			}
+			await run(values as SlashCommandOptionValues<Options>, interaction)
+		},
+	}
+}
+
+function createOption<
+	const Data extends SlashCommandOption["data"],
+	const Value,
+>(
+	data: Data,
+	getValue: (
+		name: string,
+		interaction: Discord.ChatInputCommandInteraction,
+	) => Value | null,
+) {
+	return {
+		data: { ...data, required: true },
+		getValue,
+	} satisfies SlashCommandOption
+}
+
+export function optional<const Option extends SlashCommandOption>(
+	option: Option,
+) {
+	return {
+		...option,
+		data: { ...option.data, required: false },
+	} satisfies SlashCommandOption
+}
+
+export function stringOption(description: string) {
+	return createOption({
+		description,
+		type: Discord.ApplicationCommandOptionType.String,
+	}, (name, interaction) => interaction.options.getString(name))
+}
+
+export function integerOption(description: string) {
+	return createOption({
+		description,
+		type: Discord.ApplicationCommandOptionType.Integer,
+	}, (name, interaction) => interaction.options.getInteger(name))
+}
+
+export function booleanOption(description: string) {
+	return createOption({
+		description,
+		type: Discord.ApplicationCommandOptionType.Boolean,
+	}, (name, interaction) => interaction.options.getBoolean(name))
+}
+
+export function userOption(description: string) {
+	return createOption({
+		description,
+		type: Discord.ApplicationCommandOptionType.User,
+	}, (name, interaction) => interaction.options.getUser(name))
+}
+
+export function channelOption(description: string) {
+	return createOption({
+		description,
+		type: Discord.ApplicationCommandOptionType.Channel,
+	}, (name, interaction) => interaction.options.getChannel(name))
+}
+
+export function roleOption(description: string) {
+	return createOption({
+		description,
+		type: Discord.ApplicationCommandOptionType.Role,
+	}, (name, interaction) => interaction.options.getRole(name))
+}
+
+export function mentionableOption(description: string) {
+	return createOption({
+		description,
+		type: Discord.ApplicationCommandOptionType.Mentionable,
+	}, (name, interaction) => interaction.options.getMentionable(name))
 }
