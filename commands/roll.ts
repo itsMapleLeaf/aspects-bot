@@ -17,19 +17,17 @@ export const rollCommand = defineSlashCommand({
 			"d12",
 			"d20",
 		]),
-		difficulty: stringOption("The difficulty die to roll against", [
+		difficulty: optional(stringOption("The difficulty die to roll against", [
 			"d4",
 			"d6",
 			"d8",
 			"d12",
 			"d20",
-		]),
-		modify: optional(
-			stringOption("Make the roll easier or harder", [
-				"eased",
-				"daunting",
-			]),
-		),
+		])),
+		modify: optional(stringOption("Make the roll easier or harder", [
+			"eased",
+			"daunting",
+		])),
 		fatigue: optional(
 			integerOption("Number of fatigue dice to roll"),
 		),
