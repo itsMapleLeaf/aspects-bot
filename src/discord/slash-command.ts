@@ -147,6 +147,42 @@ export function defineSlashCommand<
 	}
 }
 
+export function defineSlashCommandGroup(
+	name: string,
+	description: string,
+	commands: SlashCommand[],
+): SlashCommand {
+	return {
+		options: {},
+		getData: () => ({
+			name,
+			description,
+			options: commands.map((command) => {
+				const data = {
+					type: Discord.ApplicationCommandType.ChatInput,
+					...command.getData(),
+				}
+				if (data.type !== Discord.ApplicationCommandType.ChatInput) {
+					throw new Error(
+						`Command ${data.name} is not a slash command.`,
+					)
+				}
+				const { options: _, ...subcommandData } = data
+				return {
+					...subcommandData,
+					type: Discord.ApplicationCommandOptionType.Subcommand,
+				}
+			}),
+		}),
+		run: async (interaction) => {
+			const command = commands.find((c) =>
+				c.getData().name === interaction.options.getSubcommand()
+			)
+			await command?.run(interaction)
+		},
+	}
+}
+
 function createOption<
 	const Data extends Omit<OptionData, "name">,
 	const Value,

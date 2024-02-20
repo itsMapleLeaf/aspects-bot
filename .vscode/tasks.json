@@ -5,20 +5,11 @@
 			"label": "dev",
 			"detail": "deno run --watch main.ts",
 			"type": "deno",
-			"command": "run",
-			"args": [
-				"--watch",
-				"-A",
-				"main.ts"
-			],
-			"problemMatcher": [
-				"$deno"
-			],
-			"group": {
-				"kind": "build",
-				"isDefault": true,
-			},
-			"isBackground": true,
+			"command": "task",
+			"args": ["dev"],
+			"problemMatcher": ["$deno"],
+			"group": { "kind": "build", "isDefault": true },
+			"isBackground": true
 		}
 	]
 }
