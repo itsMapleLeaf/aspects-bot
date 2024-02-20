@@ -167,10 +167,22 @@ export function defineSlashCommandGroup(
 						`Command ${data.name} is not a slash command.`,
 					)
 				}
-				const { options: _, ...subcommandData } = data
+
 				return {
-					...subcommandData,
+					...data,
 					type: Discord.ApplicationCommandOptionType.Subcommand,
+					options: data.options?.flatMap((option) => {
+						if (
+							option.type ===
+								Discord.ApplicationCommandOptionType.SubcommandGroup ||
+							option.type === Discord.ApplicationCommandOptionType.Subcommand
+						) {
+							throw new Error(
+								`Subcommand ${option.name} is not a slash command.`,
+							)
+						}
+						return option
+					}),
 				}
 			}),
 		}),
@@ -215,34 +227,40 @@ export function optional<const Option extends SlashCommandOption>(
 
 export function stringOption(
 	description: string,
-	choices?: [string, ...string[]],
+	choices?: Array<string | { name: string; value: string }>,
 ) {
 	return createOption({
 		description,
 		type: Discord.ApplicationCommandOptionType.String,
-		choices: choices?.map((value) => ({ name: value, value })),
+		choices: choices?.map((choice) =>
+			typeof choice === "string" ? ({ name: choice, value: choice }) : choice
+		),
 	}, (name, interaction) => interaction.options.getString(name))
 }
 
 export function numberOption(
 	description: string,
-	choices?: [number, ...number[]],
+	choices?: Array<number | { name: string; value: number }>,
 ) {
 	return createOption({
 		description,
 		type: Discord.ApplicationCommandOptionType.Number,
-		choices: choices?.map((value) => ({ name: value.toString(), value })),
+		choices: choices?.map((value) =>
+			typeof value === "number" ? ({ name: value.toString(), value }) : value
+		),
 	}, (name, interaction) => interaction.options.getNumber(name))
 }
 
 export function integerOption(
 	description: string,
-	choices?: [number, ...number[]],
+	choices?: Array<number | { name: string; value: number }>,
 ) {
 	return createOption({
 		description,
 		type: Discord.ApplicationCommandOptionType.Integer,
-		choices: choices?.map((value) => ({ name: value.toString(), value })),
+		choices: choices?.map((value) =>
+			typeof value === "number" ? ({ name: value.toString(), value }) : value
+		),
 	}, (name, interaction) => interaction.options.getInteger(name))
 }
 
