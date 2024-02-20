@@ -1,4 +1,5 @@
 import "https://deno.land/x/dotenv@v3.2.2/load.ts"
+import chalk from "npm:chalk"
 import * as Discord from "npm:discord.js"
 import {
 	booleanOption,
@@ -14,7 +15,7 @@ const client = new Discord.Client({
 })
 
 client.on("ready", (client) => {
-	console.info(`Logged in as ${client.user?.tag}`)
+	console.info(chalk.gray`Logged in as`, chalk.bold(client.user?.tag))
 })
 
 useSlashCommands(client, [

@@ -50,11 +50,10 @@ export function useSlashCommands(
 				)
 			})
 			console.info(
-				chalk.gray(
-					`Registered ${
-						chalk.white(chalk.bold(commands.length))
-					} slash command(s) in ${chalk.green(prettyMs(time))}`,
-				),
+				chalk.gray`Registered`,
+				chalk.bold(commands.length),
+				chalk.gray`slash command(s) in`,
+				chalk.bold(prettyMs(time)),
 			)
 		} catch (error) {
 			console.error(chalk.red`Failed to register slash commands.`, error)
