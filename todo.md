@@ -4,7 +4,7 @@
 
 ## fatigue tracking
 
-- [ ] create a character and store them in a DB
+- [x] create a character and store them in a DB
 - [ ] add commands to get and set fatigue
 - [ ] when rolling a dice,
 

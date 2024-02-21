@@ -29,6 +29,27 @@
       "when": 1708505591303,
       "tag": "0003_curious_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1708506229398,
+      "tag": "0004_sparkling_the_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1708506274400,
+      "tag": "0005_gigantic_magik",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1708506546620,
+      "tag": "0006_known_black_tarantula",
+      "breakpoints": true
     }
   ]
 }

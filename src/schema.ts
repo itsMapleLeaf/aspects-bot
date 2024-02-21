@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm"
-import { primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { int, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
 
 export const races = sqliteTable("races", {
 	id: text("id").primaryKey(),
@@ -89,5 +89,41 @@ export const aspectSkillsToAspectsRelations = relations(
 	(helpers) => ({
 		aspect: helpers.one(aspects),
 		aspectSkill: helpers.one(aspectSkills),
+	}),
+)
+
+export const characters = sqliteTable("characters", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	player: text("player"),
+	raceId: text("raceId")
+		.notNull()
+		.references(() => races.id),
+	aspectId: text("aspectId")
+		.notNull()
+		.references(() => aspects.id),
+	health: int("health").notNull(),
+	maxHealth: int("maxHealth").notNull(),
+	fatigue: int("fatigue").notNull(),
+})
+
+export const charactersRelations = relations(characters, (helpers) => ({
+	race: helpers.one(races),
+	aspect: helpers.one(aspects),
+}))
+
+export const characterAttributeDice = sqliteTable(
+	"characterAttributeDice",
+	{
+		characterId: text("characterId")
+			.notNull()
+			.references(() => characters.id),
+		attributeId: text("attributeId")
+			.notNull()
+			.references(() => attributes.id),
+		die: text("die").notNull(),
+	},
+	(t) => ({
+		pk: primaryKey({ columns: [t.characterId, t.attributeId] }),
 	}),
 )
