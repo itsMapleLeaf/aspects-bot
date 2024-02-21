@@ -201,11 +201,15 @@ export class SlashCommand implements Command {
 		await this.#config.run(interaction)
 	}
 
-	async handleInteraction(interaction: Discord.Interaction) {
-		if (!interaction.isChatInputCommand()) return false
-		if (interaction.commandName !== this.#config.name) return false
-		await this.run(interaction)
-		return true
+	match(interaction: Discord.CommandInteraction) {
+		if (!interaction.isChatInputCommand()) return
+		if (interaction.commandName !== this.#config.name) return
+		return {
+			name: this.#config.name,
+			run: async () => {
+				await this.run(interaction)
+			},
+		}
 	}
 }
 

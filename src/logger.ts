@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import Color from "colorjs.io"
 import prettyMilliseconds from "pretty-ms"
-import { jsonStringifySafe } from "./helpers/json.ts"
+import { inspect } from "util"
 import { Awaitable } from "./types.ts"
 
 function defineLogFunction(
@@ -21,22 +21,21 @@ function defineLogFunction(
 	).bold
 
 	const log = (constants: TemplateStringsArray, ...dynamics: unknown[]) => {
-		writeText(log.getText(constants, ...dynamics))
-	}
-
-	log.getText = (constants: TemplateStringsArray, ...dynamics: unknown[]) => {
 		const output = []
 		for (let i = 0; i < constants.length; i++) {
-			output.push(base(constants[i]))
+			if (constants[i] !== "") {
+				output.push(base(constants[i].trim()))
+			}
 			if (i < dynamics.length) {
-				const value =
-					typeof dynamics[i] === "string"
-						? dynamics[i]
-						: jsonStringifySafe(dynamics[i])
-				output.push(highlighted(value))
+				let value = dynamics[i]
+				if (isObject(value)) {
+					output.push(inspect(value, { depth: 10 }))
+				} else {
+					output.push(highlighted(value))
+				}
 			}
 		}
-		return `${dim(prefix)} ${output.join("")}`
+		writeText(dim(prefix), ...output)
 	}
 
 	return log
@@ -52,6 +51,10 @@ function defineLogFunction(
 			Math.round(clamp(g, 0, 1) * 255),
 			Math.round(clamp(b, 0, 1) * 255),
 		)
+	}
+
+	function isObject(value: unknown): value is object {
+		return value !== null && typeof value === "object"
 	}
 }
 
@@ -80,19 +83,14 @@ export const Logger = {
 			result = [undefined, error == null ? new Error("Unknown error") : error]
 		}
 
+		const [value, error] = result
 		const duration = prettyMilliseconds(Date.now() - start)
-		if (result[1] === undefined) {
+		if (error === undefined) {
 			Logger.success`${prefix} succeeded in ${duration}`
 		} else {
-			const stack = getErrorStack(result[1])
-			Logger.error`${prefix} failed in ${duration}ms. ${stack}`
+			Logger.error`${prefix} failed in ${duration}. ${error}`
 		}
 
 		return result
-
-		function getErrorStack(value: unknown) {
-			const error = value instanceof Error ? value : new Error(String(value))
-			return error.stack || error.message
-		}
 	},
 }

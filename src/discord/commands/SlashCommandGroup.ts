@@ -24,17 +24,18 @@ export class SlashCommandGroup implements Command {
 		}
 	}
 
-	async handleInteraction(interaction: Discord.Interaction): Promise<boolean> {
-		if (!interaction.isChatInputCommand()) return false
-		if (interaction.commandName !== this.#name) return false
+	match(interaction: Discord.CommandInteraction) {
+		if (!interaction.isChatInputCommand()) return
+		if (interaction.commandName !== this.#name) return
 
 		const command = this.#commands.find(
 			(command) => interaction.options.getSubcommand() === command.data.name,
 		)
-		if (!command) return false
+		if (!command) return
 
-		await command.run(interaction)
-
-		return true
+		return {
+			name: `${this.#name} ${command.data.name}`,
+			run: () => command.run(interaction),
+		}
 	}
 }
