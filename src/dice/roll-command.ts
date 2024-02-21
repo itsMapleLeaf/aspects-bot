@@ -77,7 +77,9 @@ export const rollCommand = defineSlashCommand({
 		const resultLine = difficultyResult &&
 			(actionResult >= difficultyResult ? `✅ **Success!**` : `❌ **Failure.**`)
 
-		const effectLine = resultLine && `🔥 Effect: **${actionResult}**`
+		const effectLine =
+			(difficultyResult == null || actionResult >= difficultyResult) &&
+			`🔥 Effect: **${actionResult}**`
 
 		const fatigueDamage = fatigueResults?.map((n) =>
 			n === 6 ? 2 : n >= 4 ? 1 : 0
