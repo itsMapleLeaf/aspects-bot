@@ -11,6 +11,7 @@ import {
 	generalSkills,
 	races,
 } from "../game-data.ts"
+import { Logger } from "../logger.ts"
 
 const raceChoices = [...races.values()].map((race) => ({
 	name: race.name,
@@ -77,7 +78,7 @@ export const charactersCommand = defineSlashCommandGroup(
 					),
 				}
 
-				console.log(character)
+				Logger.info`${character}`
 
 				await interaction.reply({
 					content: `Done.`,

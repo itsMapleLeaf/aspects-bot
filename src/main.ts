@@ -1,9 +1,9 @@
-import chalk from "npm:chalk"
 import * as Discord from "npm:discord.js"
-import { charactersCommand } from "./commands/characters.ts"
-import { rollCommand } from "./commands/roll.ts"
+import { charactersCommand } from "./characters/characters-command.ts"
+import { rollCommand } from "./dice/roll-command.ts"
 import { useSlashCommands } from "./discord/slash-command.ts"
 import { env } from "./env.ts"
+import { Logger } from "./logger.ts"
 
 const client = new Discord.Client({
 	intents: [
@@ -13,7 +13,7 @@ const client = new Discord.Client({
 })
 
 client.on("ready", (client) => {
-	console.info(chalk.gray`Logged in as`, chalk.bold(client.user?.tag))
+	Logger.info`Logged in as ${client.user?.tag}`
 })
 
 useSlashCommands(client, [

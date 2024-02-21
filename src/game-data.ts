@@ -1,6 +1,6 @@
 import * as Notion from "npm:@notionhq/client"
-import chalk from "npm:chalk"
 import { env } from "./env.ts"
+import { Logger } from "./logger.ts"
 
 export type Race = {
 	id: string
@@ -147,6 +147,4 @@ export async function loadGameData() {
 	)
 }
 
-console.info(chalk.gray`Loading game data...`)
-await loadGameData()
-console.info(chalk.green`Game data loaded`)
+await Logger.promise(`Loading game data`, loadGameData())

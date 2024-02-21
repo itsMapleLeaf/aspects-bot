@@ -1,13 +1,11 @@
-import chalk from "npm:chalk"
 import * as Discord from "npm:discord.js"
-import prettyMs from "npm:pretty-ms"
-import { callTimedAsync } from "../helpers/call-timed.ts"
+import { Logger } from "../logger.ts"
 import { Awaitable, NonNullableWhen } from "../types.ts"
 
 export type SlashCommand = {
 	options: Record<string, SlashCommandOption>
 	getData: () => Discord.ApplicationCommandData
-	run: (interaction: Discord.ChatInputCommandInteraction) => unknown
+	run: (interaction: Discord.ChatInputCommandInteraction) => Promise<void>
 }
 
 type OptionData = Exclude<
@@ -43,21 +41,12 @@ export function useSlashCommands(
 	commands: SlashCommand[],
 ) {
 	client.on("ready", async (client) => {
-		try {
-			const [time] = await callTimedAsync(async function setCommands() {
-				await client.application.commands.set(
-					commands.map((command) => command.getData()),
-				)
-			})
-			console.info(
-				chalk.gray`Registered`,
-				chalk.bold(commands.length),
-				chalk.gray`slash command(s) in`,
-				chalk.bold(prettyMs(time)),
-			)
-		} catch (error) {
-			console.error(chalk.red`Failed to register slash commands.`, error)
-		}
+		await Logger.promise(
+			"Registering slash commands",
+			client.application.commands.set(
+				commands.map((command) => command.getData()),
+			),
+		)
 	})
 
 	client.on("interactionCreate", async (interaction) => {
@@ -65,30 +54,23 @@ export function useSlashCommands(
 			const command = commands.find((c) =>
 				c.getData().name === interaction.commandName
 			)
+			if (!command) return
 
-			try {
-				await command?.run(interaction)
-			} catch (error) {
-				console.error(`Failed running command:`, error, {
-					command: command?.getData(),
-					interaction: interaction.toJSON(),
-				})
+			const [, commandError] = await Logger.promise(
+				`Running command ${interaction.commandName}`,
+				command.run(interaction),
+			)
 
-				try {
-					const options = {
+			if (commandError) {
+				Logger.error`Command: ${command?.getData()}`
+				Logger.error`Interaction: ${interaction.toJSON()}`
+				await Logger.promise(
+					`Sending error reply`,
+					addInteractionReply(interaction, {
 						content: `Sorry, something went wrong. Try again?`,
 						ephemeral: true,
-					}
-					if (interaction.deferred) {
-						await interaction.editReply(options)
-					} else if (interaction.replied) {
-						await interaction.followUp(options)
-					} else {
-						await interaction.reply(options)
-					}
-				} catch (error) {
-					console.error(`Failed to reply to interaction:`, error)
-				}
+					}),
+				)
 			}
 		}
 
@@ -96,19 +78,32 @@ export function useSlashCommands(
 			const command = commands.find((c) =>
 				c.getData().name === interaction.commandName
 			)
-			if (command) {
-				for (const [name, option] of Object.entries(command.options)) {
-					if (name === interaction.options.getFocused()) {
-						const choices = await option.getAutocompleteChoices?.(interaction)
-						if (choices) {
-							await interaction.respond(choices)
-							continue
-						}
-					}
-				}
-			}
+			if (!command) return
+
+			const focusedOption = Object.entries(command.options).find(
+				([name]) => name === interaction.options.getFocused(),
+			)?.[1]
+			if (!focusedOption) return
+
+			const choices = await focusedOption.getAutocompleteChoices?.(interaction)
+			if (!choices) return
+
+			await interaction.respond(choices)
 		}
 	})
+
+	async function addInteractionReply(
+		interaction: Discord.ChatInputCommandInteraction,
+		options: Discord.InteractionReplyOptions,
+	) {
+		if (interaction.deferred) {
+			await interaction.editReply(options)
+		} else if (interaction.replied) {
+			await interaction.followUp(options)
+		} else {
+			await interaction.reply(options)
+		}
+	}
 }
 
 export function defineSlashCommand<
