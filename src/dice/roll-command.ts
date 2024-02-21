@@ -1,3 +1,5 @@
+import Color from "npm:colorjs.io"
+import * as Discord from "npm:discord.js"
 import { SlashCommand } from "../discord/commands/SlashCommand.ts"
 
 export const rollCommand = SlashCommand.create({
@@ -56,40 +58,72 @@ export const rollCommand = SlashCommand.create({
 			)
 		}
 
-		const actionLine = secondActionDie
-			? `⚡ Action: 2${options.die} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
-			: `⚡ Action: 1${options.die} -> **${actionResult}**`
-
-		const difficultyLine = options.difficulty &&
-			`💢 Difficulty: 1${options.difficulty} -> **${difficultyResult}**`
-
-		const fatigueLine = fatigueResults &&
-			`💤 Fatigue: ${options.fatigue}d6 -> ${
-				fatigueResults.map((n) => `**${n}**`).join(", ")
-			}`
-
-		const resultLine = difficultyResult &&
-			(actionResult >= difficultyResult ? `✅ **Success!**` : `❌ **Failure.**`)
-
-		const effectLine =
-			(difficultyResult == null || actionResult >= difficultyResult) &&
-			`🔥 Effect: **${actionResult}**`
-
 		const fatigueDamage = fatigueResults?.map((n) =>
 			n === 6 ? 2 : n >= 4 ? 1 : 0
 		).reduce<number>((a, b) => a + b, 0) ?? 0
-		const fatigueDamageLine = fatigueDamage > 0 &&
-			`💔 Fatigue Damage: **${fatigueDamage}**`
+
+		const embed: Discord.APIEmbed = {}
+
+		if (difficultyResult != null) {
+			const isSuccess = actionResult >= difficultyResult
+
+			const { r, g, b } = new Color("oklch", [0.65, 0.15, isSuccess ? 150 : 20])
+				.toGamut({ space: "srgb" }).srgb
+
+			const color = Math.round(r * 255) << 16 | Math.round(g * 255) << 8 |
+				Math.round(b * 255)
+
+			embed.title = isSuccess ? "✅ Success!" : "❌ Failure."
+			embed.color = color
+		} else {
+			embed.title = "🎲 Roll Results"
+		}
+
+		embed.fields ??= []
+
+		if (difficultyResult == null || actionResult >= difficultyResult) {
+			embed.fields.push({
+				name: `🔥 Effect: **${actionResult}**`,
+				value: ` `,
+			})
+		}
+
+		if (fatigueDamage > 0) {
+			embed.fields.push({
+				name: `💔 Fatigue Damage: **${fatigueDamage}**`,
+				value: ` `,
+			})
+		}
+
+		embed.fields.push({
+			name: "⚡ Action Dice",
+			value: secondActionDie
+				? `2${options.die} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
+				: `1${options.die} -> **${actionResult}**`,
+		})
+
+		if (options.difficulty) {
+			embed.fields.push({
+				name: "💢 Difficulty Die",
+				value: `1${options.difficulty} -> **${difficultyResult}**`,
+			})
+		}
+
+		if (fatigueResults) {
+			embed.fields.push({
+				name: "💤 Fatigue Dice",
+				value: `${options.fatigue}d6 -> ${
+					fatigueResults
+						.map((n) =>
+							`**${n}**`
+						)
+						.join(", ")
+				}`,
+			})
+		}
 
 		await interaction.reply({
-			content: joinTruthy([
-				resultLine,
-				effectLine,
-				fatigueDamageLine,
-				"\n" + actionLine,
-				difficultyLine,
-				fatigueLine,
-			], "\n"),
+			embeds: [embed],
 			ephemeral: options.private ?? false,
 		})
 	},
