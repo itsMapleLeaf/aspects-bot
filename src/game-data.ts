@@ -147,4 +147,4 @@ export async function loadGameData() {
 	)
 }
 
-await Logger.promise(`Loading game data`, loadGameData())
+await Logger.async(`Loading game data`, loadGameData)

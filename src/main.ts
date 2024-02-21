@@ -21,4 +21,4 @@ new CommandHandler([
 	charactersCommand,
 ]).addListeners(client)
 
-await client.login(env.DISCORD_BOT_TOKEN)
+await Logger.async("Logging in", () => client.login(env.DISCORD_BOT_TOKEN))

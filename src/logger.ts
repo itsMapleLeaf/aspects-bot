@@ -66,9 +66,9 @@ export const Logger = {
 	warn: defineLogFunction(80, "w", console.warn),
 	error: defineLogFunction(10, "e", console.error),
 
-	async promise<T>(
+	async async<T>(
 		prefix: string,
-		promise: Awaitable<T>,
+		callback: () => Awaitable<T>,
 	): Promise<LoggerPromiseResult<T>> {
 		Logger.info`${prefix} ...`
 
@@ -76,7 +76,7 @@ export const Logger = {
 		let result: LoggerPromiseResult<T>
 
 		try {
-			result = [await promise, undefined]
+			result = [await callback(), undefined]
 		} catch (error: unknown) {
 			result = [undefined, error == null ? new Error("Unknown error") : error]
 		}

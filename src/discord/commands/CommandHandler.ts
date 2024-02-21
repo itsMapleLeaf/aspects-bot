@@ -11,11 +11,12 @@ export class CommandHandler {
 
 	addListeners(client: Discord.Client) {
 		client.on("ready", async (client) => {
-			await Logger.promise(
+			await Logger.async(
 				"Registering slash commands",
-				client.application.commands.set(
-					this.#commands.map((command) => command.data),
-				),
+				() =>
+					client.application.commands.set(
+						this.#commands.map((command) => command.data),
+					),
 			)
 		})
 
