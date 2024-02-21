@@ -1,6 +1,6 @@
-import chalk from "npm:chalk"
-import Color from "npm:colorjs.io"
-import prettyMilliseconds from "npm:pretty-ms"
+import chalk from "chalk"
+import Color from "colorjs.io"
+import prettyMilliseconds from "pretty-ms"
 import { jsonStringifySafe } from "./helpers/json.ts"
 import { Awaitable } from "./types.ts"
 
@@ -12,9 +12,7 @@ function defineLogFunction(
 	const chroma = 0.1
 	const lightness = 0.7
 
-	const base = createChalkColor(
-		new Color("oklch", [lightness, chroma, hue]),
-	)
+	const base = createChalkColor(new Color("oklch", [lightness, chroma, hue]))
 	const dim = createChalkColor(
 		new Color("oklch", [lightness * 0.4, chroma * 0.8, hue]),
 	)
@@ -31,9 +29,10 @@ function defineLogFunction(
 		for (let i = 0; i < constants.length; i++) {
 			output.push(base(constants[i]))
 			if (i < dynamics.length) {
-				const value = typeof dynamics[i] === "string"
-					? dynamics[i]
-					: jsonStringifySafe(dynamics[i])
+				const value =
+					typeof dynamics[i] === "string"
+						? dynamics[i]
+						: jsonStringifySafe(dynamics[i])
 				output.push(highlighted(value))
 			}
 		}

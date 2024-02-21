@@ -1,4 +1,4 @@
-import * as Discord from "npm:discord.js"
+import * as Discord from "discord.js"
 import { Command } from "./Command.ts"
 import { SlashCommand } from "./SlashCommand.ts"
 
@@ -28,8 +28,8 @@ export class SlashCommandGroup implements Command {
 		if (!interaction.isChatInputCommand()) return false
 		if (interaction.commandName !== this.#name) return false
 
-		const command = this.#commands.find((command) =>
-			interaction.options.getSubcommand() === command.data.name
+		const command = this.#commands.find(
+			(command) => interaction.options.getSubcommand() === command.data.name,
 		)
 		if (!command) return false
 

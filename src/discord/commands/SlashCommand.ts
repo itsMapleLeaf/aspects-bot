@@ -1,4 +1,4 @@
-import * as Discord from "npm:discord.js"
+import * as Discord from "discord.js"
 import { Command } from "./Command.ts"
 
 export type SlashCommandConfig<Values> = {
@@ -22,14 +22,12 @@ type CommandGroupCompatibleOptionsData = Exclude<
 	| Discord.ApplicationCommandSubGroupData
 >
 
-type SlashCommandOptionData =
-	& StrictOmit<
-		CommandGroupCompatibleOptionsData,
-		"name" | "required" | "autocomplete"
-	>
-	& {
-		required?: boolean
-	}
+type SlashCommandOptionData = StrictOmit<
+	CommandGroupCompatibleOptionsData,
+	"name" | "required" | "autocomplete"
+> & {
+	required?: boolean
+}
 
 type SlashCommandOption<T = unknown> = {
 	data: SlashCommandOptionData
@@ -66,21 +64,19 @@ export class SlashCommand implements Command {
 				name: config.name,
 				description: config.description,
 				...(options && {
-					options: Object.entries<SlashCommandOption<unknown>>(options).map((
-						[name, option],
-					) => ({
-						...option.data,
-						name,
-					})),
+					options: Object.entries<SlashCommandOption<unknown>>(options).map(
+						([name, option]) => ({
+							...option.data,
+							name,
+						}),
+					),
 				}),
 			},
 			async run(interaction) {
 				const values: Record<string, unknown> = {}
-				for (
-					const [name, option] of Object.entries<SlashCommandOption<unknown>>(
-						options ?? {},
-					)
-				) {
+				for (const [name, option] of Object.entries<
+					SlashCommandOption<unknown>
+				>(options ?? {})) {
 					values[name] = option.getValue(name, interaction)
 				}
 				await config.run(values as Values, interaction)
@@ -213,6 +209,7 @@ export class SlashCommand implements Command {
 	}
 }
 
-type StrictOmit<T, K extends AllKeys<T>> = T extends unknown ? Omit<T, K>
+type StrictOmit<T, K extends AllKeys<T>> = T extends unknown
+	? Omit<T, K>
 	: never
 type AllKeys<T> = T extends unknown ? keyof T : never

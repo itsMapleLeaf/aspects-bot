@@ -1,4 +1,14 @@
+# todo
+
 - [x] /roll
+
+## fatigue tracking
+
+- [ ] create a character and store them in a DB
+- [ ] add commands to get and set fatigue
+- [ ] when rolling a dice,
+
+---
 
 - [ ] /characters create [name] [player?] [race?] [aspect?] [secondary
       attribute?] [first skill?] [second skill?]

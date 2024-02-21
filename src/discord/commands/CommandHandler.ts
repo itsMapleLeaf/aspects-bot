@@ -1,4 +1,4 @@
-import * as Discord from "npm:discord.js"
+import * as Discord from "discord.js"
 import { Logger } from "../../logger.ts"
 import { Command } from "./Command.ts"
 
@@ -11,12 +11,10 @@ export class CommandHandler {
 
 	addListeners(client: Discord.Client) {
 		client.on("ready", async (client) => {
-			await Logger.async(
-				"Registering slash commands",
-				() =>
-					client.application.commands.set(
-						this.#commands.map((command) => command.data),
-					),
+			await Logger.async("Registering slash commands", () =>
+				client.application.commands.set(
+					this.#commands.map((command) => command.data),
+				),
 			)
 		})
 

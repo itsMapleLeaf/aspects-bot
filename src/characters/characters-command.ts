@@ -1,32 +1,33 @@
 import { SlashCommand } from "../discord/commands/SlashCommand.ts"
 import { SlashCommandGroup } from "../discord/commands/SlashCommandGroup.ts"
 import {
-	aspects,
-	aspectSkills,
-	attributes,
-	generalSkills,
-	races,
+	listAspectSkills,
+	listAspects,
+	listAttributes,
+	listGeneralSkills,
+	listRaces,
 } from "../game-data.ts"
-import { Logger } from "../logger.ts"
+import { Character } from "./character.ts"
 
-const raceChoices = [...races.values()].map((race) => ({
+const raceChoices = (await listRaces()).map((race) => ({
 	name: race.name,
 	value: race.id,
 }))
 
-const aspectChoices = [...aspects.values()].map((aspect) => ({
+const aspectChoices = (await listAspects()).map((aspect) => ({
 	name: aspect.name,
 	value: aspect.id,
 }))
 
-const skillChoices = [...generalSkills.values(), ...aspectSkills.values()].map((
-	skill,
-) => ({
+const skillChoices = [
+	...(await listGeneralSkills()),
+	...(await listAspectSkills()),
+].map((skill) => ({
 	name: skill.name,
 	value: skill.id,
 }))
 
-const attributeChoices = [...attributes.values()].map((attribute) => ({
+const attributeChoices = [...(await listAttributes())].map((attribute) => ({
 	name: attribute.name,
 	value: attribute.id,
 }))
@@ -54,34 +55,17 @@ export const charactersCommand = new SlashCommandGroup(
 				),
 			},
 			run: async (options, interaction) => {
-				const race = races.get(options.race)!
-				const aspect = aspects.get(options.aspect)!
-				const aspectAttribute = aspect.attribute
-				const secondaryAttribute = attributes.get(
-					options.secondary_attribute,
-				)!
-
-				const character = {
+				let character = await Character.create({
 					name: options.name,
 					player: options.player?.username,
 					race: options.race,
 					aspect: options.aspect,
-					attributes: Object.fromEntries(
-						[...attributes.values()].map((attribute) => [
-							attribute.id,
-							attribute.id === aspectAttribute.id
-								? "d8"
-								: attribute.id === secondaryAttribute.id
-								? "d6"
-								: "d4",
-						]),
-					),
-				}
-
-				Logger.info`${character}`
+					secondaryAttribute: options.secondary_attribute,
+				})
+				character = await character.save()
 
 				await interaction.reply({
-					content: `Done.`,
+					embeds: [character.toEmbed()],
 					ephemeral: true,
 				})
 			},

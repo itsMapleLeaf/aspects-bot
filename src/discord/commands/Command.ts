@@ -1,4 +1,4 @@
-import * as Discord from "npm:discord.js"
+import * as Discord from "discord.js"
 
 export interface Command {
 	get data(): Discord.ApplicationCommandData

@@ -1,5 +1,5 @@
-import Color from "npm:colorjs.io"
-import * as Discord from "npm:discord.js"
+import Color from "colorjs.io"
+import * as Discord from "discord.js"
 import { SlashCommand } from "../discord/commands/SlashCommand.ts"
 
 export const rollCommand = SlashCommand.create({
@@ -52,25 +52,30 @@ export const rollCommand = SlashCommand.create({
 		}
 
 		if (options.fatigue) {
-			fatigueResults = Array.from(
-				{ length: options.fatigue },
-				() => Math.floor(Math.random() * 6 + 1),
+			fatigueResults = Array.from({ length: options.fatigue }, () =>
+				Math.floor(Math.random() * 6 + 1),
 			)
 		}
 
-		const fatigueDamage = fatigueResults?.map((n) =>
-			n === 6 ? 2 : n >= 4 ? 1 : 0
-		).reduce<number>((a, b) => a + b, 0) ?? 0
+		const fatigueDamage =
+			fatigueResults
+				?.map((n) => (n === 6 ? 2 : n >= 4 ? 1 : 0))
+				.reduce<number>((a, b) => a + b, 0) ?? 0
 
 		const embed: Discord.APIEmbed = {}
 
 		if (difficultyResult != null) {
 			const isSuccess = actionResult >= difficultyResult
 
-			const { r, g, b } = new Color("oklch", [0.65, 0.15, isSuccess ? 150 : 20])
-				.toGamut({ space: "srgb" }).srgb
+			const { r, g, b } = new Color("oklch", [
+				0.65,
+				0.15,
+				isSuccess ? 150 : 20,
+			]).toGamut({ space: "srgb" }).srgb
 
-			const color = Math.round(r * 255) << 16 | Math.round(g * 255) << 8 |
+			const color =
+				(Math.round(r * 255) << 16) |
+				(Math.round(g * 255) << 8) |
 				Math.round(b * 255)
 
 			embed.title = isSuccess ? "✅ Success!" : "❌ Failure."
@@ -112,13 +117,9 @@ export const rollCommand = SlashCommand.create({
 		if (fatigueResults) {
 			embed.fields.push({
 				name: "💤 Fatigue Dice",
-				value: `${options.fatigue}d6 -> ${
-					fatigueResults
-						.map((n) =>
-							`**${n}**`
-						)
-						.join(", ")
-				}`,
+				value: `${options.fatigue}d6 -> ${fatigueResults
+					.map((n) => `**${n}**`)
+					.join(", ")}`,
 			})
 		}
 
