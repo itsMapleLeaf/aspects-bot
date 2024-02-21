@@ -108,8 +108,14 @@ export const characters = sqliteTable("characters", {
 })
 
 export const charactersRelations = relations(characters, (helpers) => ({
-	race: helpers.one(races),
-	aspect: helpers.one(aspects),
+	race: helpers.one(races, {
+		fields: [characters.raceId],
+		references: [races.id],
+	}),
+	aspect: helpers.one(aspects, {
+		fields: [characters.aspectId],
+		references: [aspects.id],
+	}),
 }))
 
 export const characterAttributeDice = sqliteTable(
