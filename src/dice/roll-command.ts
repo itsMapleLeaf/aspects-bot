@@ -1,37 +1,31 @@
-import {
-	booleanOption,
-	defineSlashCommand,
-	integerOption,
-	optional,
-	stringOption,
-} from "../discord/slash-command.ts"
+import { SlashCommand } from "../discord/commands/SlashCommand.ts"
 
-export const rollCommand = defineSlashCommand({
+export const rollCommand = SlashCommand.create({
 	name: "roll",
 	description: "Roll some dice",
 	options: {
-		die: stringOption("The die to roll", [
-			"d4",
-			"d6",
-			"d8",
-			"d12",
-			"d20",
-		]),
-		difficulty: optional(stringOption("The difficulty die to roll against", [
-			"d4",
-			"d6",
-			"d8",
-			"d12",
-			"d20",
-		])),
-		modify: optional(stringOption("Make the roll easier or harder", [
-			"eased",
-			"daunting",
-		])),
-		fatigue: optional(
-			integerOption("Number of fatigue dice to roll"),
+		die: SlashCommand.string("The die to roll", {
+			choices: ["d4", "d6", "d8", "d12", "d20"].map((d) => ({
+				name: d,
+				value: d,
+			})),
+		}),
+		difficulty: SlashCommand.string.optional(
+			"The difficulty die to roll against",
+			{
+				choices: ["d4", "d6", "d8", "d12", "d20"].map((d) => ({
+					name: d,
+					value: d,
+				})),
+			},
 		),
-		private: optional(booleanOption("Only you can see this.")),
+		modify: SlashCommand.string.optional("Make the roll easier or harder", {
+			choices: ["eased", "daunting"].map((m) => ({ name: m, value: m })),
+		}),
+		fatigue: SlashCommand.integer.optional("Number of fatigue dice to roll"),
+		private: SlashCommand.boolean.optional(
+			"Hide this roll from everyone but yourself.",
+		),
 	},
 	run: async (options, interaction) => {
 		const faces = parseInt(options.die.split("d")[1])

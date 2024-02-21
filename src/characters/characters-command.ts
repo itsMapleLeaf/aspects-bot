@@ -1,9 +1,5 @@
-import {
-	defineSlashCommand,
-	defineSlashCommandGroup,
-	stringOption,
-	userOption,
-} from "../discord/slash-command.ts"
+import { SlashCommand } from "../discord/commands/SlashCommand.ts"
+import { SlashCommandGroup } from "../discord/commands/SlashCommandGroup.ts"
 import {
 	aspects,
 	aspectSkills,
@@ -35,22 +31,26 @@ const attributeChoices = [...attributes.values()].map((attribute) => ({
 	value: attribute.id,
 }))
 
-export const charactersCommand = defineSlashCommandGroup(
+export const charactersCommand = new SlashCommandGroup(
 	"characters",
 	"Manage your characters",
 	[
-		defineSlashCommand({
+		SlashCommand.create({
 			name: "create",
 			description:
 				"Create a new character. Most options will be generated if not provided.",
 			options: {
-				name: stringOption("The character's name"),
-				player: userOption("The player of the character"),
-				race: stringOption("The character's race", raceChoices),
-				aspect: stringOption("The character's aspect", aspectChoices),
-				secondary_attribute: stringOption(
+				name: SlashCommand.string("The character's name"),
+				player: SlashCommand.user("The player of the character"),
+				race: SlashCommand.string("The character's race", {
+					choices: raceChoices,
+				}),
+				aspect: SlashCommand.string("The character's aspect", {
+					choices: aspectChoices,
+				}),
+				secondary_attribute: SlashCommand.string(
 					"The character's secondary attribute",
-					attributeChoices,
+					{ choices: attributeChoices },
 				),
 			},
 			run: async (options, interaction) => {
