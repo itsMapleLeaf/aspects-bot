@@ -129,7 +129,3 @@ export const rollCommand = SlashCommand.create({
 		})
 	},
 })
-
-function joinTruthy(values: unknown[], separator = " ") {
-	return values.filter(Boolean).join(separator)
-}

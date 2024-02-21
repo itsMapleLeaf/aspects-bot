@@ -1,22 +1,13 @@
-import { APIEmbed, CommandInteraction } from "discord.js"
-import { eq } from "drizzle-orm"
-import { db } from "../db.ts"
-import { CommandError } from "../discord/commands/CommandError.ts"
 import { SlashCommand } from "../discord/commands/SlashCommand.ts"
 import { SlashCommandGroup } from "../discord/commands/SlashCommandGroup.ts"
 import {
-	diceKinds,
-	getAspect,
-	getAttribute,
-	getRace,
 	listAspectSkills,
 	listAspects,
 	listAttributes,
 	listGeneralSkills,
 	listRaces,
 } from "../game-data.ts"
-import { raise } from "../helpers/errors.ts"
-import { aspects, characters, races } from "../schema.ts"
+import { CharacterModel } from "./CharacterModel.ts"
 
 const raceChoices = (await listRaces()).map((race) => ({
 	name: race.name,
@@ -48,7 +39,7 @@ export const charactersCommand = new SlashCommandGroup(
 		SlashCommand.create({
 			name: "create",
 			description:
-				"Create a new character. Most options will be generated if not provided.",
+				"Create a new character. Omitted options will be randomized.",
 			options: {
 				name: SlashCommand.string("The character's name"),
 				player: SlashCommand.user.optional("The player of the character"),
@@ -64,54 +55,17 @@ export const charactersCommand = new SlashCommandGroup(
 				),
 			},
 			run: async (options, interaction) => {
-				const race = options.race
-					? await getRace(options.race)
-					: randomItem(await listRaces())
-
-				const aspects = await listAspects()
-				const aspect = options.aspect
-					? await getAspect(options.aspect)
-					: randomItem(aspects)
-
-				const attributes = await listAttributes()
-
-				const secondaryAttribute = options.secondary_attribute
-					? await getAttribute(options.secondary_attribute)
-					: randomItem(attributes.filter((a) => a.id !== aspect.attributeId))
-
-				const attributeDice = Object.fromEntries(
-					attributes.map((attribute) => [
-						attribute.id,
-						attribute.id === aspect.attributeId
-							? "d8"
-							: attribute.id === secondaryAttribute.id
-							? "d6"
-							: "d4",
-					]),
-				)
-
-				const strengthAttributeDie = attributeDice["strength"]
-				const maxHealth = diceKinds.get(strengthAttributeDie)!.faces * 2
-				const health = maxHealth
-
-				const character = db
-					.insert(characters)
-					.values({
-						id: crypto.randomUUID(),
-						name: options.name,
-						player: options.player?.username,
-						raceId: race.id,
-						aspectId: aspect.id,
-						health,
-						maxHealth,
-						fatigue: 0,
-					})
-					.returning()
-					.get()
+				const character = await CharacterModel.create({
+					name: options.name,
+					player: options.player?.username ?? interaction.user.username,
+					aspectId: options.aspect,
+					raceId: options.race,
+					secondaryAttributeId: options.secondary_attribute,
+				})
 
 				await interaction.reply({
 					content: "Character created!",
-					embeds: [createCharacterEmbed({ ...character, race, aspect })],
+					embeds: [character.embed],
 					ephemeral: true,
 				})
 			},
@@ -121,15 +75,14 @@ export const charactersCommand = new SlashCommandGroup(
 			name: "view",
 			description: "View a character's details",
 			options: {
-				character: SlashCommand.string.optional("The character to view"),
+				name: SlashCommand.string.optional("The character to view"),
 			},
 			run: async (options, interaction) => {
-				const character = await getInteractionCharacter(
-					options.character,
-					interaction,
-				)
+				const character = options.name
+					? await CharacterModel.fromCharacterId(options.name)
+					: await CharacterModel.fromPlayer(interaction.user.username)
 				await interaction.reply({
-					embeds: [createCharacterEmbed(character)],
+					embeds: [character.embed],
 					ephemeral: true,
 				})
 			},
@@ -141,88 +94,24 @@ export const charactersCommand = new SlashCommandGroup(
 			options: {
 				name: SlashCommand.string.optional("The character to modify"),
 				health: SlashCommand.integer.optional("The character's health"),
-				max_health: SlashCommand.integer.optional("The character's max health"),
 				fatigue: SlashCommand.integer.optional("The character's fatigue"),
 			},
 			run: async (options, interaction) => {
-				const character = await getInteractionCharacter(
-					options.name,
-					interaction,
-				)
+				const character = options.name
+					? await CharacterModel.fromCharacterId(options.name)
+					: await CharacterModel.fromPlayer(interaction.user.username)
 
-				await db
-					.update(characters)
-					.set({
-						health: options.health ?? character.health,
-						maxHealth: options.max_health ?? character.maxHealth,
-						fatigue: options.fatigue ?? character.fatigue,
-					})
-					.where(eq(characters.id, character.id))
-
-				const updated =
-					(await db.query.characters.findFirst({
-						where: eq(characters.id, character.id),
-						with: { race: true, aspect: true },
-					})) ?? raise("Unexpected: updated character not found")
+				await character.update({
+					health: options.health ?? character.data.health,
+					fatigue: options.fatigue ?? character.data.fatigue,
+				})
 
 				await interaction.reply({
 					content: "Character updated!",
-					embeds: [createCharacterEmbed(updated)],
+					embeds: [character.embed],
 					ephemeral: true,
 				})
 			},
 		}),
 	],
 )
-
-async function getInteractionCharacter(
-	characterId: string | null | undefined,
-	interaction: CommandInteraction,
-) {
-	const where = characterId
-		? eq(characters.id, characterId)
-		: eq(characters.player, interaction.user.username)
-
-	const character = await db.query.characters.findFirst({
-		where,
-		with: {
-			race: true,
-			aspect: true,
-		},
-	})
-
-	return character ?? raise(new CommandError("Couldn't find that character."))
-}
-
-function createCharacterEmbed(
-	character: typeof characters.$inferSelect & {
-		race: typeof races.$inferSelect
-		aspect: typeof aspects.$inferSelect
-	},
-): APIEmbed {
-	return {
-		title: character.name,
-		fields: [
-			{ name: "Player", value: character.player ?? "no one yet" },
-			{ name: "Race", value: character.race.name },
-			{ name: "Aspect", value: character.aspect.name },
-			// {
-			// 	name: "Attributes",
-			// 	value: Object.entries(character.attributes)
-			// 		.map(([name, dice]) => `${name}: ${dice}`)
-			// 		.join("\n"),
-			// },
-			{
-				name: "Health",
-				value: `${character.health}/${character.maxHealth}`,
-			},
-			{ name: "Fatigue", value: `${character.fatigue}` },
-		].filter(Boolean),
-	}
-}
-
-function randomItem<T>(items: Iterable<T>): T {
-	const array = [...items]
-	if (array.length === 0) throw new Error("No items to choose from")
-	return array[Math.floor(Math.random() * array.length)]
-}

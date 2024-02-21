@@ -102,8 +102,10 @@ export const characters = sqliteTable("characters", {
 	aspectId: text("aspectId")
 		.notNull()
 		.references(() => aspects.id),
+	secondaryAttributeId: text("secondaryAttributeId")
+		.references(() => attributes.id)
+		.notNull(),
 	health: int("health").notNull(),
-	maxHealth: int("maxHealth").notNull(),
 	fatigue: int("fatigue").notNull(),
 })
 
@@ -116,20 +118,8 @@ export const charactersRelations = relations(characters, (helpers) => ({
 		fields: [characters.aspectId],
 		references: [aspects.id],
 	}),
-}))
-
-export const characterAttributeDice = sqliteTable(
-	"characterAttributeDice",
-	{
-		characterId: text("characterId")
-			.notNull()
-			.references(() => characters.id),
-		attributeId: text("attributeId")
-			.notNull()
-			.references(() => attributes.id),
-		die: text("die").notNull(),
-	},
-	(t) => ({
-		pk: primaryKey({ columns: [t.characterId, t.attributeId] }),
+	secondaryAttribute: helpers.one(attributes, {
+		fields: [characters.secondaryAttributeId],
+		references: [attributes.id],
 	}),
-)
+}))
