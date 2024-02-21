@@ -105,7 +105,7 @@ export const charactersCommand = new SlashCommandGroup(
 				const characterEmbed = {
 					title: character.name,
 					fields: [
-						{ name: "Played by", value: character.player ?? "no one yet" },
+						{ name: "Player", value: character.player ?? "no one yet" },
 						{ name: "Race", value: race.name },
 						{ name: "Aspect", value: aspect.name },
 						// {
