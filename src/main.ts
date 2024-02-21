@@ -6,7 +6,10 @@ import { useSlashCommands } from "./discord/slash-command.ts"
 import { env } from "./env.ts"
 
 const client = new Discord.Client({
-	intents: [Discord.GatewayIntentBits.Guilds],
+	intents: [
+		Discord.GatewayIntentBits.Guilds,
+		Discord.GatewayIntentBits.GuildMembers,
+	],
 })
 
 client.on("ready", (client) => {
