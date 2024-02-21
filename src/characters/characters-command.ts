@@ -1,4 +1,7 @@
+import { APIEmbed, CommandInteraction } from "discord.js"
+import { eq } from "drizzle-orm"
 import { db } from "../db.ts"
+import { CommandError } from "../discord/commands/CommandError.ts"
 import { SlashCommand } from "../discord/commands/SlashCommand.ts"
 import { SlashCommandGroup } from "../discord/commands/SlashCommandGroup.ts"
 import {
@@ -12,7 +15,8 @@ import {
 	listGeneralSkills,
 	listRaces,
 } from "../game-data.ts"
-import { characters } from "../schema.ts"
+import { raise } from "../helpers/errors.ts"
+import { aspects, characters, races } from "../schema.ts"
 
 const raceChoices = (await listRaces()).map((race) => ({
 	name: race.name,
@@ -90,47 +94,132 @@ export const charactersCommand = new SlashCommandGroup(
 				const maxHealth = diceKinds.get(strengthAttributeDie)!.faces * 2
 				const health = maxHealth
 
-				const character: typeof characters.$inferInsert = {
-					id: crypto.randomUUID(),
-					name: options.name,
-					player: options.player?.username,
-					raceId: race.id,
-					aspectId: aspect.id,
-					health,
-					maxHealth,
-					fatigue: 0,
-				}
-				await db.insert(characters).values(character)
-
-				const characterEmbed = {
-					title: character.name,
-					fields: [
-						{ name: "Player", value: character.player ?? "no one yet" },
-						{ name: "Race", value: race.name },
-						{ name: "Aspect", value: aspect.name },
-						// {
-						// 	name: "Attributes",
-						// 	value: Object.entries(character.attributes)
-						// 		.map(([name, dice]) => `${name}: ${dice}`)
-						// 		.join("\n"),
-						// },
-						{
-							name: "Health",
-							value: `${character.health}/${character.maxHealth}`,
-						},
-						{ name: "Fatigue", value: character.fatigue.toString() },
-					],
-				}
+				const character = db
+					.insert(characters)
+					.values({
+						id: crypto.randomUUID(),
+						name: options.name,
+						player: options.player?.username,
+						raceId: race.id,
+						aspectId: aspect.id,
+						health,
+						maxHealth,
+						fatigue: 0,
+					})
+					.returning()
+					.get()
 
 				await interaction.reply({
 					content: "Character created!",
-					embeds: [characterEmbed],
+					embeds: [createCharacterEmbed({ ...character, race, aspect })],
+					ephemeral: true,
+				})
+			},
+		}),
+
+		SlashCommand.create({
+			name: "view",
+			description: "View a character's details",
+			options: {
+				character: SlashCommand.string.optional("The character to view"),
+			},
+			run: async (options, interaction) => {
+				const character = await getInteractionCharacter(
+					options.character,
+					interaction,
+				)
+				await interaction.reply({
+					embeds: [createCharacterEmbed(character)],
+					ephemeral: true,
+				})
+			},
+		}),
+
+		SlashCommand.create({
+			name: "update",
+			description: "Set a character's attribute, skill, or aspect",
+			options: {
+				name: SlashCommand.string.optional("The character to modify"),
+				health: SlashCommand.integer.optional("The character's health"),
+				max_health: SlashCommand.integer.optional("The character's max health"),
+				fatigue: SlashCommand.integer.optional("The character's fatigue"),
+			},
+			run: async (options, interaction) => {
+				const character = await getInteractionCharacter(
+					options.name,
+					interaction,
+				)
+
+				await db
+					.update(characters)
+					.set({
+						health: options.health ?? character.health,
+						maxHealth: options.max_health ?? character.maxHealth,
+						fatigue: options.fatigue ?? character.fatigue,
+					})
+					.where(eq(characters.id, character.id))
+
+				const updated =
+					(await db.query.characters.findFirst({
+						where: eq(characters.id, character.id),
+						with: { race: true, aspect: true },
+					})) ?? raise("Unexpected: updated character not found")
+
+				await interaction.reply({
+					content: "Character updated!",
+					embeds: [createCharacterEmbed(updated)],
 					ephemeral: true,
 				})
 			},
 		}),
 	],
 )
+
+async function getInteractionCharacter(
+	characterId: string | null | undefined,
+	interaction: CommandInteraction,
+) {
+	const where = characterId
+		? eq(characters.id, characterId)
+		: eq(characters.player, interaction.user.username)
+
+	const character = await db.query.characters.findFirst({
+		where,
+		with: {
+			race: true,
+			aspect: true,
+		},
+	})
+
+	return character ?? raise(new CommandError("Couldn't find that character."))
+}
+
+function createCharacterEmbed(
+	character: typeof characters.$inferSelect & {
+		race: typeof races.$inferSelect
+		aspect: typeof aspects.$inferSelect
+	},
+): APIEmbed {
+	return {
+		title: character.name,
+		fields: [
+			{ name: "Player", value: character.player ?? "no one yet" },
+			{ name: "Race", value: character.race.name },
+			{ name: "Aspect", value: character.aspect.name },
+			// {
+			// 	name: "Attributes",
+			// 	value: Object.entries(character.attributes)
+			// 		.map(([name, dice]) => `${name}: ${dice}`)
+			// 		.join("\n"),
+			// },
+			{
+				name: "Health",
+				value: `${character.health}/${character.maxHealth}`,
+			},
+			{ name: "Fatigue", value: `${character.fatigue}` },
+		].filter(Boolean),
+	}
+}
 
 function randomItem<T>(items: Iterable<T>): T {
 	const array = [...items]

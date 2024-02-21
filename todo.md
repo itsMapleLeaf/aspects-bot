@@ -5,8 +5,8 @@
 ## fatigue tracking
 
 - [x] create a character and store them in a DB
-- [ ] add commands to get and set fatigue
-- [ ] when rolling a dice,
+- [x] add commands to get and set fatigue
+- [ ] when rolling a dice, use player character's fatigue by default, and deal fatigue damage
 
 ---
 
