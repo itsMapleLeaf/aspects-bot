@@ -1,5 +1,3 @@
-import Color from "colorjs.io"
-import * as Discord from "discord.js"
 import { CharacterModel } from "../characters/CharacterModel.ts"
 import { characterOption } from "../characters/character-option.ts"
 import { optionTypes } from "../discord/slash-command-option.ts"
@@ -64,79 +62,54 @@ export const rollCommand = defineSlashCommand({
 				?.map((n) => (n === 6 ? 2 : n >= 4 ? 1 : 0))
 				.reduce<number>((a, b) => a + b, 0) ?? 0
 
-		const embed: Discord.APIEmbed = {}
+		let title = "🎲 Roll Results"
 
 		if (difficultyResult != null) {
 			const isSuccess = actionResult >= difficultyResult
-
-			const { r, g, b } = new Color("oklch", [
-				0.65,
-				0.15,
-				isSuccess ? 150 : 20,
-			]).toGamut({ space: "srgb" }).srgb
-
-			const color =
-				(Math.round(r * 255) << 16) |
-				(Math.round(g * 255) << 8) |
-				Math.round(b * 255)
-
-			embed.title = isSuccess ? "✅ Success!" : "❌ Failure."
-			embed.color = color
-		} else {
-			embed.title = "🎲 Roll Results"
+			title = isSuccess ? "✅ Success!" : "❌ Failure."
 		}
 
-		embed.fields ??= []
+		const valueLines = []
 
 		if (difficultyResult == null || actionResult >= difficultyResult) {
-			embed.fields.push({
-				name: `🔥 Effect: **${actionResult}**`,
-				value: ` `,
-			})
+			valueLines.push(`🔥 Effect: **${actionResult}**`)
 		}
 
 		if (fatigueDamage > 0) {
-			let value = " "
-
+			valueLines.push(`💔 Fatigue Damage: **${fatigueDamage}**`)
 			if (character) {
 				const previousHealth = character.data.health
 				await character.update({
 					health: Math.max(0, previousHealth - fatigueDamage),
 				})
-				value = `Health: **${previousHealth}** -> **${character.data.health}**`
+				valueLines.push(
+					`❤️‍🩹 Health: **${previousHealth}** -> **${character.data.health}**`,
+				)
 			}
-
-			embed.fields.push({
-				name: `💔 Fatigue Damage: **${fatigueDamage}**`,
-				value,
-			})
 		}
 
-		embed.fields.push({
-			name: "⚡ Action Dice",
-			value: secondActionDie
-				? `2${options.die} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
-				: `1${options.die} -> **${actionResult}**`,
-		})
+		const diceLines = []
+
+		const actionDiceList = secondActionDie
+			? `2d${options.die} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
+			: `1d${options.die} -> **${actionResult}**`
+		diceLines.push(`⚡ Action Dice: ${actionDiceList}`)
 
 		if (options.difficulty) {
-			embed.fields.push({
-				name: "💢 Difficulty Die",
-				value: `1${options.difficulty} -> **${difficultyResult}**`,
-			})
+			diceLines.push(
+				`💢 Difficulty Die: 1d${options.difficulty} -> **${difficultyResult}**`,
+			)
 		}
 
 		if (fatigueResults) {
-			embed.fields.push({
-				name: "💤 Fatigue Dice",
-				value: `${fatigue}d6 -> ${fatigueResults
-					.map((n) => `**${n}**`)
-					.join(", ")}`,
-			})
+			const fatigueDieList = fatigueResults
+				.map((n) => (n === 6 ? `__**${n}**__` : n >= 4 ? `**${n}**` : n))
+				.join(", ")
+			diceLines.push(`💤 Fatigue Dice: ${fatigue}d6 -> ${fatigueDieList}`)
 		}
 
 		await interaction.reply({
-			embeds: [embed],
+			content: [`## ${title}`, ...valueLines, "", ...diceLines].join("\n"),
 			ephemeral: options.private ?? false,
 		})
 	},
