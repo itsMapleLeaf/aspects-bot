@@ -12,20 +12,25 @@ import {
 	listRaces,
 } from "../game-data.ts"
 import { raise } from "../helpers/errors.ts"
-import { aspects, attributes, characters, races } from "../schema.ts"
+import {
+	aspectsTable,
+	attributesTable,
+	charactersTable,
+	racesTable,
+} from "../schema.ts"
 
-type CharacterModelData = typeof characters.$inferSelect & {
-	race: typeof races.$inferSelect
-	aspect: typeof aspects.$inferSelect
+type CharacterModelData = typeof charactersTable.$inferSelect & {
+	race: typeof racesTable.$inferSelect
+	aspect: typeof aspectsTable.$inferSelect
 }
 
 export class CharacterModel {
 	#data: CharacterModelData
-	#attributes: (typeof attributes.$inferSelect)[]
+	#attributes: (typeof attributesTable.$inferSelect)[]
 
 	private constructor(
 		data: CharacterModelData,
-		attributesData: (typeof attributes.$inferSelect)[],
+		attributesData: (typeof attributesTable.$inferSelect)[],
 	) {
 		this.#data = data
 		this.#attributes = attributesData
@@ -68,7 +73,7 @@ export class CharacterModel {
 			secondaryAttributeId: secondaryAttribute.id,
 			health: 0,
 			fatigue: 0,
-		} satisfies typeof characters.$inferInsert
+		} satisfies typeof charactersTable.$inferInsert
 
 		const model = new CharacterModel({ ...data, race, aspect }, attributes)
 		await model.update({ health: model.maxHealth })
@@ -77,22 +82,22 @@ export class CharacterModel {
 
 	static async fromCharacterId(characterId: string) {
 		const character =
-			(await db.query.characters.findFirst({
-				where: eq(characters.id, characterId),
+			(await db.query.charactersTable.findFirst({
+				where: eq(charactersTable.id, characterId),
 				with: {
 					race: true,
 					aspect: true,
 				},
 			})) ?? raise(new CommandError("Couldn't find that character."))
 
-		const attributes = await db.query.attributes.findMany()
+		const attributes = await db.query.attributesTable.findMany()
 
 		return new CharacterModel(character, attributes)
 	}
 
 	static async fromPlayer(user: { id: Snowflake }) {
-		const character = await db.query.characters.findFirst({
-			where: eq(characters.playerDiscordId, user.id),
+		const character = await db.query.charactersTable.findFirst({
+			where: eq(charactersTable.playerDiscordId, user.id),
 			with: {
 				race: true,
 				aspect: true,
@@ -100,7 +105,7 @@ export class CharacterModel {
 		})
 		if (!character) return
 
-		const attributes = await db.query.attributes.findMany()
+		const attributes = await db.query.attributesTable.findMany()
 		return new CharacterModel(character, attributes)
 	}
 
@@ -156,12 +161,12 @@ export class CharacterModel {
 		}
 	}
 
-	async update(values: Partial<typeof characters.$inferInsert>) {
+	async update(values: Partial<typeof charactersTable.$inferInsert>) {
 		const data = db
-			.insert(characters)
+			.insert(charactersTable)
 			.values({ ...this.#data, ...values })
 			.onConflictDoUpdate({
-				target: [characters.id],
+				target: [charactersTable.id],
 				set: values,
 			})
 			.returning()

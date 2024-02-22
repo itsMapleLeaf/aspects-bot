@@ -63,7 +63,7 @@ export async function loadGameData() {
 			.map(([name, description]: [string, string]) => ({ name, description }))
 
 		await db
-			.insert(schema.races)
+			.insert(schema.racesTable)
 			.values({
 				id: kebabCase(name),
 				name,
@@ -72,7 +72,7 @@ export async function loadGameData() {
 
 		for (const ability of abilities) {
 			await db
-				.insert(schema.raceAbilities)
+				.insert(schema.raceAbilitiesTable)
 				.values({
 					id: kebabCase(ability.name),
 					name: ability.name,
@@ -93,7 +93,7 @@ export async function loadGameData() {
 		const attributeName = getPropertyText((attributeDoc as any).properties.Name)
 
 		await db
-			.insert(schema.aspects)
+			.insert(schema.aspectsTable)
 			.values({
 				id: kebabCase(name),
 				name,
@@ -113,7 +113,7 @@ export async function loadGameData() {
 		const aspectName = getPropertyText((aspectDoc as any).properties.Name)
 
 		await db
-			.insert(schema.attributes)
+			.insert(schema.attributesTable)
 			.values({
 				id: kebabCase(name),
 				name,
@@ -134,7 +134,7 @@ export async function loadGameData() {
 		const attributeName = getPropertyText((attributeDoc as any).properties.Name)
 
 		await db
-			.insert(schema.generalSkills)
+			.insert(schema.generalSkillsTable)
 			.values({
 				id: kebabCase(name),
 				name,
@@ -158,7 +158,7 @@ export async function loadGameData() {
 		)
 
 		await db
-			.insert(schema.aspectSkills)
+			.insert(schema.aspectSkillsTable)
 			.values({
 				id: kebabCase(name),
 				name,
@@ -167,7 +167,7 @@ export async function loadGameData() {
 
 		for (const aspectId of aspectIds) {
 			await db
-				.insert(schema.aspectSkillsToAspects)
+				.insert(schema.aspectSkillsToAspectsTable)
 				.values({
 					aspectSkillId: kebabCase(name),
 					aspectId: kebabCase(aspectId),
@@ -178,56 +178,56 @@ export async function loadGameData() {
 }
 
 export async function listRaces() {
-	return await db.query.races.findMany()
+	return await db.query.racesTable.findMany()
 }
 
 export async function getRace(id: string) {
-	const race = await db.query.races.findFirst({
-		where: eq(schema.races.id, id),
+	const race = await db.query.racesTable.findFirst({
+		where: eq(schema.racesTable.id, id),
 	})
 	return race ?? raise(`Race not found: ${id}`)
 }
 
 export async function listAspects() {
-	return await db.query.aspects.findMany()
+	return await db.query.aspectsTable.findMany()
 }
 
 export async function getAspect(id: string) {
-	const aspect = await db.query.aspects.findFirst({
-		where: eq(schema.aspects.id, id),
+	const aspect = await db.query.aspectsTable.findFirst({
+		where: eq(schema.aspectsTable.id, id),
 	})
 	return aspect ?? raise(`Aspect not found: ${id}`)
 }
 
 export async function listAttributes() {
-	return await db.query.attributes.findMany()
+	return await db.query.attributesTable.findMany()
 }
 
 export async function getAttribute(id: string) {
-	const attribute = await db.query.attributes.findFirst({
-		where: eq(schema.attributes.id, id),
+	const attribute = await db.query.attributesTable.findFirst({
+		where: eq(schema.attributesTable.id, id),
 	})
 	return attribute ?? raise(`Attribute not found: ${id}`)
 }
 
 export async function listGeneralSkills() {
-	return await db.query.generalSkills.findMany()
+	return await db.query.generalSkillsTable.findMany()
 }
 
 export async function getGeneralSkill(id: string) {
-	const generalSkill = await db.query.generalSkills.findFirst({
-		where: eq(schema.generalSkills.id, id),
+	const generalSkill = await db.query.generalSkillsTable.findFirst({
+		where: eq(schema.generalSkillsTable.id, id),
 	})
 	return generalSkill ?? raise(`General skill not found: ${id}`)
 }
 
 export async function listAspectSkills() {
-	return await db.query.aspectSkills.findMany()
+	return await db.query.aspectSkillsTable.findMany()
 }
 
 export async function getAspectSkill(id: string) {
-	const aspectSkill = await db.query.aspectSkills.findFirst({
-		where: eq(schema.aspectSkills.id, id),
+	const aspectSkill = await db.query.aspectSkillsTable.findFirst({
+		where: eq(schema.aspectSkillsTable.id, id),
 	})
 	return aspectSkill ?? raise(`Aspect skill not found: ${id}`)
 }
