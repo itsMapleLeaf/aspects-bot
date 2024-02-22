@@ -25,6 +25,7 @@ type SlashCommandArgs<Options extends Record<string, SlashCommandOption>> = {
 	name: string
 	description: string
 	options: Options
+	data?: Partial<SlashCommandData>
 	run: (
 		interaction: Discord.ChatInputCommandInteraction,
 		options: SlashCommandOptionValues<Options>,
@@ -50,6 +51,7 @@ export function defineSlashCommand<
 		type: "slash",
 		run,
 		data: {
+			...args.data,
 			name: args.name,
 			description: args.description,
 			options: Object.entries(args.options).map(

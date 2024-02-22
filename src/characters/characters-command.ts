@@ -1,3 +1,4 @@
+import { PermissionFlagsBits } from "discord.js"
 import { optionTypes } from "../discord/slash-command-option.ts"
 import {
 	defineSlashCommand,
@@ -60,7 +61,7 @@ export const charactersCommand = defineSlashCommandGroup(
 			run: async (interaction, options) => {
 				const character = await CharacterModel.create({
 					name: options.name,
-					player: options.player?.username ?? null,
+					playerDiscordId: options.player?.id ?? null,
 					aspectId: options.aspect,
 					raceId: options.race,
 					secondaryAttributeId: options.secondary_attribute,
@@ -111,6 +112,35 @@ export const charactersCommand = defineSlashCommandGroup(
 
 				await interaction.reply({
 					content: "Character updated!",
+					embeds: [character.embed],
+					ephemeral: true,
+				})
+			},
+		}),
+
+		defineSlashCommand({
+			name: "assign",
+			description: "Assign a character to a player",
+			options: {
+				name: optionTypes.required(
+					optionTypes.string("The character to assign"),
+				),
+				player: optionTypes.required(
+					optionTypes.user("The player to assign the character to"),
+				),
+			},
+			data: {
+				defaultMemberPermissions: [PermissionFlagsBits.ManageGuild],
+			},
+			run: async (interaction, options) => {
+				const character = await CharacterModel.fromCharacterId(options.name)
+
+				await character.update({
+					playerDiscordId: options.player.id,
+				})
+
+				await interaction.reply({
+					content: `Assigned **${character.data.name}** to <@${options.player.id}>.`,
 					embeds: [character.embed],
 					ephemeral: true,
 				})

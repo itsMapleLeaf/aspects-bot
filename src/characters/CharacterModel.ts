@@ -1,5 +1,6 @@
-import { APIEmbed } from "discord.js"
+import { APIEmbed, Snowflake } from "discord.js"
 import { eq } from "drizzle-orm"
+import { kebabCase } from "lodash-es"
 import { db } from "../db.ts"
 import { CommandError } from "../discord/commands/CommandError.ts"
 import {
@@ -32,7 +33,7 @@ export class CharacterModel {
 
 	static async create(options: {
 		name: string
-		player: string | null
+		playerDiscordId: string | null
 		aspectId: string | null
 		raceId: string | null
 		secondaryAttributeId: string | null
@@ -53,15 +54,15 @@ export class CharacterModel {
 			: randomItem(attributes.filter((a) => a.id !== aspect.attributeId))
 
 		const data = {
-			id: crypto.randomUUID(),
+			id: kebabCase(options.name),
 			name: options.name,
-			player: options.player,
+			playerDiscordId: options.playerDiscordId,
 			raceId: race.id,
 			aspectId: aspect.id,
 			secondaryAttributeId: secondaryAttribute.id,
 			health: 0,
 			fatigue: 0,
-		}
+		} satisfies typeof characters.$inferInsert
 
 		const model = new CharacterModel({ ...data, race, aspect }, attributes)
 		await model.update({ health: model.maxHealth })
@@ -69,35 +70,29 @@ export class CharacterModel {
 	}
 
 	static async fromCharacterId(characterId: string) {
-		const character = await db.query.characters.findFirst({
-			where: eq(characters.id, characterId),
-			with: {
-				race: true,
-				aspect: true,
-			},
-		})
-
-		if (!character) {
-			raise(new CommandError("Couldn't find that character."))
-		}
+		const character =
+			(await db.query.characters.findFirst({
+				where: eq(characters.id, characterId),
+				with: {
+					race: true,
+					aspect: true,
+				},
+			})) ?? raise(new CommandError("Couldn't find that character."))
 
 		const attributes = await db.query.attributes.findMany()
 
 		return new CharacterModel(character, attributes)
 	}
 
-	static async fromPlayer(username: string) {
-		const character = await db.query.characters.findFirst({
-			where: eq(characters.player, username),
-			with: {
-				race: true,
-				aspect: true,
-			},
-		})
-
-		if (!character) {
-			raise(new CommandError("Couldn't find that character."))
-		}
+	static async fromPlayer(discordUserId: Snowflake) {
+		const character =
+			(await db.query.characters.findFirst({
+				where: eq(characters.playerDiscordId, discordUserId),
+				with: {
+					race: true,
+					aspect: true,
+				},
+			})) ?? raise(new CommandError("Couldn't find that character."))
 
 		const attributes = await db.query.attributes.findMany()
 
@@ -135,7 +130,12 @@ export class CharacterModel {
 		return {
 			title: this.#data.name,
 			fields: [
-				{ name: "Player", value: this.#data.player ?? "no one yet" },
+				{
+					name: "Player",
+					value: this.#data.playerDiscordId
+						? `<@${this.#data.playerDiscordId}>`
+						: "NPC",
+				},
 				{ name: "Race", value: this.#data.race.name },
 				{ name: "Aspect", value: this.#data.aspect.name },
 				...this.baseAttributeDice.map((entry) => ({
@@ -151,13 +151,17 @@ export class CharacterModel {
 		}
 	}
 
-	async update(values: { health?: number; fatigue?: number }) {
+	async update(values: Partial<typeof characters.$inferInsert>) {
 		const data = db
-			.update(characters)
-			.set(values)
-			.where(eq(characters.id, this.#data.id))
+			.insert(characters)
+			.values({ ...this.#data, ...values })
+			.onConflictDoUpdate({
+				target: [characters.id],
+				set: values,
+			})
 			.returning()
 			.get()
+
 		this.#data = { ...this.#data, ...data }
 	}
 }

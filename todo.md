@@ -1,6 +1,9 @@
 # todo
 
 - [x] /roll
+- [ ] add autocomplete for characters to character commands
+- [x] /characters view [name]
+- [x] /characters assign [name] [player]
 
 ## fatigue tracking
 
@@ -8,13 +11,11 @@
 - [x] add commands to get and set fatigue
 - [ ] when rolling a dice, use player character's fatigue by default, and deal fatigue damage
 
----
+## future
 
 - [ ] /characters create [name] [player?] [race?] [aspect?] [secondary
       attribute?] [first skill?] [second skill?]
-- [ ] /characters view [name]
 - [ ] /characters delete [name] (with confirmation)
-- [ ] /characters assign [name] [player]
 
 - [ ] /stats upgrade [stat] [character?]
 - [ ] /stats downgrade [stat] [character?]

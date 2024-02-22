@@ -95,7 +95,7 @@ export const aspectSkillsToAspectsRelations = relations(
 export const characters = sqliteTable("characters", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
-	player: text("player"),
+	playerDiscordId: text("playerDiscordId"),
 	raceId: text("raceId")
 		.notNull()
 		.references(() => races.id),
