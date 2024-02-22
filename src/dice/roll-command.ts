@@ -1,6 +1,7 @@
 import Color from "colorjs.io"
 import * as Discord from "discord.js"
 import { CharacterModel } from "../characters/CharacterModel.ts"
+import { characterOption } from "../characters/character-option.ts"
 import { optionTypes } from "../discord/slash-command-option.ts"
 import { defineSlashCommand } from "../discord/slash-command.ts"
 
@@ -27,6 +28,7 @@ export const rollCommand = defineSlashCommand({
 		}),
 		fatigue: optionTypes.integer("Number of fatigue dice to roll"),
 		private: optionTypes.boolean("Hide this roll from everyone but yourself."),
+		character: characterOption("The character to roll for"),
 	},
 	run: async (interaction, options) => {
 		const character = await CharacterModel.fromPlayer(interaction.user)

@@ -1,5 +1,5 @@
 import * as Discord from "discord.js"
-import { Command } from "./command-handler.ts"
+import { Command, CommandTask } from "./command-handler.ts"
 import {
 	SlashCommandOption,
 	SlashCommandOptionValues,
@@ -19,6 +19,9 @@ export interface SlashCommand extends Command {
 	type: "slash"
 	data: SlashCommandData
 	run: (interaction: Discord.ChatInputCommandInteraction) => Promise<void>
+	autocomplete: (
+		interaction: Discord.AutocompleteInteraction,
+	) => CommandTask | undefined
 }
 
 type SlashCommandArgs<Options extends Record<string, SlashCommandOption>> = {
@@ -47,9 +50,20 @@ export function defineSlashCommand<
 		await args.run(interaction, values as SlashCommandOptionValues<Options>)
 	}
 
+	function autocomplete(interaction: Discord.AutocompleteInteraction) {
+		const focused = interaction.options.getFocused(true)
+		const option = args.options[focused.name]
+		return {
+			name: `autocomplete(${args.name}:${focused.name})`,
+			async run() {
+				const choices = await option.autocomplete?.(focused.value.trim())
+				await interaction.respond(choices ?? [])
+			},
+		}
+	}
+
 	return {
 		type: "slash",
-		run,
 		data: {
 			...args.data,
 			name: args.name,
@@ -66,6 +80,8 @@ export function defineSlashCommand<
 					} as DiscordSlashCommandOptionData),
 			),
 		},
+		run,
+		autocomplete,
 		match: (interaction) => {
 			if (
 				interaction.isChatInputCommand() &&
@@ -83,15 +99,7 @@ export function defineSlashCommand<
 				interaction.isAutocomplete() &&
 				interaction.commandName === args.name
 			) {
-				const focused = interaction.options.getFocused(true)
-				const option = args.options[focused.name]
-				return {
-					name: `autocomplete(${args.name}:${focused})`,
-					async run() {
-						const choices = await option.autocomplete?.(focused.value)
-						await interaction.respond(choices?.slice(0, 25) ?? [])
-					},
-				}
+				return autocomplete(interaction)
 			}
 		},
 	}
@@ -131,6 +139,13 @@ export function defineSlashCommandGroup(
 						},
 					}
 				}
+			}
+
+			if (interaction.isAutocomplete() && interaction.commandName === name) {
+				const command = items.find(
+					(item) => item.data.name === interaction.options.getSubcommand(),
+				)
+				return command?.autocomplete?.(interaction)
 			}
 		},
 	}

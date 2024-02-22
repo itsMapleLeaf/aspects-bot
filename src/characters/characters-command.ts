@@ -13,6 +13,7 @@ import {
 	listRaces,
 } from "../game-data.ts"
 import { CharacterModel } from "./CharacterModel.ts"
+import { characterOption } from "./character-option.ts"
 
 const raceChoices = (await listRaces()).map((race) => ({
 	name: race.name,
@@ -80,7 +81,7 @@ export const charactersCommand = defineSlashCommandGroup(
 			name: "view",
 			description: "View a character's details",
 			options: {
-				name: optionTypes.string("The character to view"),
+				name: characterOption(),
 			},
 			run: async (interaction, options) => {
 				const character = options.name
@@ -106,7 +107,7 @@ export const charactersCommand = defineSlashCommandGroup(
 			name: "update",
 			description: "Set a character's attribute, skill, or aspect",
 			options: {
-				name: optionTypes.string("The character to modify"),
+				name: characterOption(),
 				health: optionTypes.integer("The character's health"),
 				fatigue: optionTypes.integer("The character's fatigue"),
 			},
@@ -140,9 +141,7 @@ export const charactersCommand = defineSlashCommandGroup(
 			name: "assign",
 			description: "Assign a character to a player",
 			options: {
-				name: optionTypes.required(
-					optionTypes.string("The character to assign"),
-				),
+				name: optionTypes.required(characterOption()),
 				player: optionTypes.required(
 					optionTypes.user("The player to assign the character to"),
 				),
