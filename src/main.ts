@@ -1,5 +1,5 @@
 import * as Discord from "discord.js"
-import { charactersCommand } from "./characters/characters-command.ts"
+import { characterCommands } from "./characters/characters-command.ts"
 import { rollCommand } from "./dice/roll-command.ts"
 import { useCommands } from "./discord/command-handler.ts"
 import { env } from "./env.ts"
@@ -16,6 +16,6 @@ client.on("ready", (client) => {
 	Logger.info`Logged in as ${client.user?.tag}`
 })
 
-useCommands(client, [rollCommand, charactersCommand])
+useCommands(client, [rollCommand, ...characterCommands])
 
 await Logger.async("Logging in", () => client.login(env.DISCORD_BOT_TOKEN))
