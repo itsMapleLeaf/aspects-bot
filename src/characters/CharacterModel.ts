@@ -53,6 +53,12 @@ export class CharacterModel {
 			? await getAttribute(options.secondaryAttributeId)
 			: randomItem(attributes.filter((a) => a.id !== aspect.attributeId))
 
+		if (aspect.attributeId === secondaryAttribute.id) {
+			throw new CommandError(
+				"Secondary attribute cannot be the same as the aspect's attribute.",
+			)
+		}
+
 		const data = {
 			id: kebabCase(options.name),
 			name: options.name,
