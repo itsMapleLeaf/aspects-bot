@@ -1,5 +1,8 @@
-import { SlashCommand } from "../discord/commands/SlashCommand.ts"
-import { SlashCommandGroup } from "../discord/commands/SlashCommandGroup.ts"
+import { optionTypes } from "../discord/slash-command-option.ts"
+import {
+	defineSlashCommand,
+	defineSlashCommandGroup,
+} from "../discord/slash-command.ts"
 import {
 	listAspectSkills,
 	listAspects,
@@ -32,32 +35,32 @@ const attributeChoices = [...(await listAttributes())].map((attribute) => ({
 	value: attribute.id,
 }))
 
-export const charactersCommand = new SlashCommandGroup(
+export const charactersCommand = defineSlashCommandGroup(
 	"characters",
 	"Manage your characters",
 	[
-		SlashCommand.create({
+		defineSlashCommand({
 			name: "create",
 			description:
 				"Create a new character. Omitted options will be randomized.",
 			options: {
-				name: SlashCommand.string("The character's name"),
-				player: SlashCommand.user.optional("The player of the character"),
-				race: SlashCommand.string.optional("The character's race", {
+				name: optionTypes.required(optionTypes.string("The character's name")),
+				player: optionTypes.user("The player of the character"),
+				race: optionTypes.string("The character's race", {
 					choices: raceChoices,
 				}),
-				aspect: SlashCommand.string.optional("The character's aspect", {
+				aspect: optionTypes.string("The character's aspect", {
 					choices: aspectChoices,
 				}),
-				secondary_attribute: SlashCommand.string.optional(
+				secondary_attribute: optionTypes.string(
 					"The character's secondary attribute",
 					{ choices: attributeChoices },
 				),
 			},
-			run: async (options, interaction) => {
+			run: async (interaction, options) => {
 				const character = await CharacterModel.create({
 					name: options.name,
-					player: options.player?.username ?? interaction.user.username,
+					player: options.player?.username ?? null,
 					aspectId: options.aspect,
 					raceId: options.race,
 					secondaryAttributeId: options.secondary_attribute,
@@ -71,13 +74,13 @@ export const charactersCommand = new SlashCommandGroup(
 			},
 		}),
 
-		SlashCommand.create({
+		defineSlashCommand({
 			name: "view",
 			description: "View a character's details",
 			options: {
-				name: SlashCommand.string.optional("The character to view"),
+				name: optionTypes.string("The character to view"),
 			},
-			run: async (options, interaction) => {
+			run: async (interaction, options) => {
 				const character = options.name
 					? await CharacterModel.fromCharacterId(options.name)
 					: await CharacterModel.fromPlayer(interaction.user.username)
@@ -88,15 +91,15 @@ export const charactersCommand = new SlashCommandGroup(
 			},
 		}),
 
-		SlashCommand.create({
+		defineSlashCommand({
 			name: "update",
 			description: "Set a character's attribute, skill, or aspect",
 			options: {
-				name: SlashCommand.string.optional("The character to modify"),
-				health: SlashCommand.integer.optional("The character's health"),
-				fatigue: SlashCommand.integer.optional("The character's fatigue"),
+				name: optionTypes.string("The character to modify"),
+				health: optionTypes.integer("The character's health"),
+				fatigue: optionTypes.integer("The character's fatigue"),
 			},
-			run: async (options, interaction) => {
+			run: async (interaction, options) => {
 				const character = options.name
 					? await CharacterModel.fromCharacterId(options.name)
 					: await CharacterModel.fromPlayer(interaction.user.username)

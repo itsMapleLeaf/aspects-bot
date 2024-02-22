@@ -32,7 +32,7 @@ export class CharacterModel {
 
 	static async create(options: {
 		name: string
-		player: string
+		player: string | null
 		aspectId: string | null
 		raceId: string | null
 		secondaryAttributeId: string | null

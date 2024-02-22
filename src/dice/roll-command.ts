@@ -1,48 +1,44 @@
 import Color from "colorjs.io"
 import * as Discord from "discord.js"
-import { SlashCommand } from "../discord/commands/SlashCommand.ts"
+import { optionTypes } from "../discord/slash-command-option.ts"
+import { defineSlashCommand } from "../discord/slash-command.ts"
 
-export const rollCommand = SlashCommand.create({
+export const rollCommand = defineSlashCommand({
 	name: "roll",
 	description: "Roll some dice",
 	options: {
-		die: SlashCommand.string("The die to roll", {
+		die: optionTypes.required(
+			optionTypes.integer("The die to roll", {
+				choices: [4, 6, 8, 12, 20].map((value) => ({
+					name: `d${value}`,
+					value,
+				})),
+			}),
+		),
+		difficulty: optionTypes.string("The difficulty die to roll against", {
 			choices: ["d4", "d6", "d8", "d12", "d20"].map((d) => ({
 				name: d,
 				value: d,
 			})),
 		}),
-		difficulty: SlashCommand.string.optional(
-			"The difficulty die to roll against",
-			{
-				choices: ["d4", "d6", "d8", "d12", "d20"].map((d) => ({
-					name: d,
-					value: d,
-				})),
-			},
-		),
-		modify: SlashCommand.string.optional("Make the roll easier or harder", {
+		modify: optionTypes.string("Make the roll easier or harder", {
 			choices: ["eased", "daunting"].map((m) => ({ name: m, value: m })),
 		}),
-		fatigue: SlashCommand.integer.optional("Number of fatigue dice to roll"),
-		private: SlashCommand.boolean.optional(
-			"Hide this roll from everyone but yourself.",
-		),
+		fatigue: optionTypes.integer("Number of fatigue dice to roll"),
+		private: optionTypes.boolean("Hide this roll from everyone but yourself."),
 	},
-	run: async (options, interaction) => {
-		const faces = parseInt(options.die.split("d")[1])
-
-		const firstActionDie = Math.floor(Math.random() * faces + 1)
+	run: async (interaction, options) => {
+		const firstActionDie = Math.floor(Math.random() * options.die + 1)
 		let secondActionDie
 		let actionResult = firstActionDie
 		let difficultyResult
 		let fatigueResults
 
 		if (options.modify === "eased") {
-			secondActionDie = Math.floor(Math.random() * faces + 1)
+			secondActionDie = Math.floor(Math.random() * options.die + 1)
 			actionResult = Math.max(firstActionDie, secondActionDie)
 		} else if (options.modify === "daunting") {
-			secondActionDie = Math.floor(Math.random() * faces + 1)
+			secondActionDie = Math.floor(Math.random() * options.die + 1)
 			actionResult = Math.min(firstActionDie, secondActionDie)
 		}
 
