@@ -84,18 +84,17 @@ export class CharacterModel {
 		return new CharacterModel(character, attributes)
 	}
 
-	static async fromPlayer(discordUserId: Snowflake) {
-		const character =
-			(await db.query.characters.findFirst({
-				where: eq(characters.playerDiscordId, discordUserId),
-				with: {
-					race: true,
-					aspect: true,
-				},
-			})) ?? raise(new CommandError("Couldn't find that character."))
+	static async fromPlayer(user: { id: Snowflake }) {
+		const character = await db.query.characters.findFirst({
+			where: eq(characters.playerDiscordId, user.id),
+			with: {
+				race: true,
+				aspect: true,
+			},
+		})
+		if (!character) return
 
 		const attributes = await db.query.attributes.findMany()
-
 		return new CharacterModel(character, attributes)
 	}
 

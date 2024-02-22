@@ -9,7 +9,7 @@
 
 - [x] create a character and store them in a DB
 - [x] add commands to get and set fatigue
-- [ ] when rolling a dice, use player character's fatigue by default, and deal fatigue damage
+- [x] when rolling a dice, use player character's fatigue by default, and deal fatigue damage
 
 ## future
 

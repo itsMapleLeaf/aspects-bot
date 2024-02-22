@@ -1,4 +1,5 @@
 import { PermissionFlagsBits } from "discord.js"
+import { CommandError } from "../discord/commands/CommandError.ts"
 import { optionTypes } from "../discord/slash-command-option.ts"
 import {
 	defineSlashCommand,
@@ -84,7 +85,16 @@ export const charactersCommand = defineSlashCommandGroup(
 			run: async (interaction, options) => {
 				const character = options.name
 					? await CharacterModel.fromCharacterId(options.name)
-					: await CharacterModel.fromPlayer(interaction.user.username)
+					: await CharacterModel.fromPlayer(interaction.user)
+
+				if (!character) {
+					throw new CommandError(
+						options.name
+							? "Couldn't find that character."
+							: "You don't have a character assigned.",
+					)
+				}
+
 				await interaction.reply({
 					embeds: [character.embed],
 					ephemeral: true,
@@ -103,7 +113,15 @@ export const charactersCommand = defineSlashCommandGroup(
 			run: async (interaction, options) => {
 				const character = options.name
 					? await CharacterModel.fromCharacterId(options.name)
-					: await CharacterModel.fromPlayer(interaction.user.username)
+					: await CharacterModel.fromPlayer(interaction.user)
+
+				if (!character) {
+					throw new CommandError(
+						options.name
+							? "Couldn't find that character."
+							: "You don't have a character assigned.",
+					)
+				}
 
 				await character.update({
 					health: options.health ?? character.data.health,

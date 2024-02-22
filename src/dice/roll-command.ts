@@ -1,5 +1,6 @@
 import Color from "colorjs.io"
 import * as Discord from "discord.js"
+import { CharacterModel } from "../characters/CharacterModel.ts"
 import { optionTypes } from "../discord/slash-command-option.ts"
 import { defineSlashCommand } from "../discord/slash-command.ts"
 
@@ -28,6 +29,9 @@ export const rollCommand = defineSlashCommand({
 		private: optionTypes.boolean("Hide this roll from everyone but yourself."),
 	},
 	run: async (interaction, options) => {
+		const character = await CharacterModel.fromPlayer(interaction.user)
+		const fatigue = options.fatigue ?? character?.data.fatigue
+
 		const firstActionDie = Math.floor(Math.random() * options.die + 1)
 		let secondActionDie
 		let actionResult = firstActionDie
@@ -47,8 +51,8 @@ export const rollCommand = defineSlashCommand({
 			difficultyResult = Math.floor(Math.random() * difficultyFaces + 1)
 		}
 
-		if (options.fatigue) {
-			fatigueResults = Array.from({ length: options.fatigue }, () =>
+		if (fatigue) {
+			fatigueResults = Array.from({ length: fatigue }, () =>
 				Math.floor(Math.random() * 6 + 1),
 			)
 		}
@@ -90,9 +94,19 @@ export const rollCommand = defineSlashCommand({
 		}
 
 		if (fatigueDamage > 0) {
+			let value = " "
+
+			if (character) {
+				const previousHealth = character.data.health
+				await character.update({
+					health: Math.max(0, previousHealth - fatigueDamage),
+				})
+				value = `Health: **${previousHealth}** -> **${character.data.health}**`
+			}
+
 			embed.fields.push({
 				name: `💔 Fatigue Damage: **${fatigueDamage}**`,
-				value: ` `,
+				value,
 			})
 		}
 
@@ -113,7 +127,7 @@ export const rollCommand = defineSlashCommand({
 		if (fatigueResults) {
 			embed.fields.push({
 				name: "💤 Fatigue Dice",
-				value: `${options.fatigue}d6 -> ${fatigueResults
+				value: `${fatigue}d6 -> ${fatigueResults
 					.map((n) => `**${n}**`)
 					.join(", ")}`,
 			})
