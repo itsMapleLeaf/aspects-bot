@@ -53,6 +53,9 @@ export const characterCommands = [
 				"The character's secondary attribute",
 				{ choices: attributeChoices },
 			),
+			notes: optionTypes.integer(
+				"The number of notes (currency) the character starts with",
+			),
 		},
 		run: async (interaction, options) => {
 			const character = await CharacterModel.create({
@@ -61,6 +64,7 @@ export const characterCommands = [
 				aspectId: options.aspect,
 				raceId: options.race,
 				secondaryAttributeId: options.secondary_attribute,
+				currency: options.notes,
 			})
 
 			await interaction.reply({
@@ -107,6 +111,7 @@ export const characterCommands = [
 			name: characterOption("The character to update. Omit to use your own"),
 			health: optionTypes.integer("The character's health"),
 			fatigue: optionTypes.integer("The character's fatigue"),
+			notes: optionTypes.integer("The character's notes (currency) amount"),
 		},
 		run: async (interaction, options) => {
 			const character = options.name
@@ -126,6 +131,7 @@ export const characterCommands = [
 			await character.update({
 				health: options.health ?? character.data.health,
 				fatigue: options.fatigue ?? character.data.fatigue,
+				currency: options.notes ?? character.data.currency,
 			})
 
 			const diffLines = Object.entries(character.data)

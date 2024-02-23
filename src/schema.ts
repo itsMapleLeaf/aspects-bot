@@ -113,6 +113,7 @@ export const charactersTable = sqliteTable("characters", {
 		.notNull(),
 	health: int("health").notNull(),
 	fatigue: int("fatigue").notNull(),
+	currency: int("currency").notNull().default(100),
 })
 
 export const charactersRelations = relations(charactersTable, (helpers) => ({

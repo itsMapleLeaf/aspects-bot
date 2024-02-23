@@ -42,6 +42,7 @@ export class CharacterModel {
 		aspectId: string | null
 		raceId: string | null
 		secondaryAttributeId: string | null
+		currency: number | null
 	}) {
 		const race = options.raceId
 			? await getRace(options.raceId)
@@ -73,6 +74,7 @@ export class CharacterModel {
 			secondaryAttributeId: secondaryAttribute.id,
 			health: 0,
 			fatigue: 0,
+			currency: options.currency ?? 100,
 		} satisfies typeof charactersTable.$inferInsert
 
 		const model = new CharacterModel({ ...data, race, aspect }, attributes)
@@ -146,8 +148,14 @@ export class CharacterModel {
 						? `<@${this.#data.playerDiscordId}>`
 						: "NPC",
 				},
-				{ name: "Race", value: this.#data.race.name },
-				{ name: "Aspect", value: this.#data.aspect.name },
+				{
+					name: "Race",
+					value: this.#data.race.name,
+				},
+				{
+					name: "Aspect",
+					value: this.#data.aspect.name,
+				},
 				...this.baseAttributeDice.map((entry) => ({
 					name: entry.attribute.name,
 					value: `d${entry.die}`,
@@ -156,7 +164,14 @@ export class CharacterModel {
 					name: "Health",
 					value: `${this.#data.health}/${this.maxHealth}`,
 				},
-				{ name: "Fatigue", value: `${this.#data.fatigue}` },
+				{
+					name: "Fatigue",
+					value: `${this.#data.fatigue}`,
+				},
+				{
+					name: "Notes",
+					value: `${this.#data.currency}`,
+				},
 			],
 		}
 	}
