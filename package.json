@@ -3,7 +3,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch ./src/main.ts",
-		"db-push": "drizzle-kit push:sqlite"
+		"db:push": "drizzle-kit push:sqlite"
 	},
 	"dependencies": {
 		"@notionhq/client": "2.2.14",
