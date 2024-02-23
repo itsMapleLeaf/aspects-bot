@@ -1,5 +1,5 @@
 import { CharacterModel } from "../characters/CharacterModel.ts"
-import { characterOption } from "../characters/character-option.ts"
+import { characterOption } from "../characters/characterOption.ts"
 import { optionTypes } from "../discord/slash-command-option.ts"
 import { defineSlashCommand } from "../discord/slash-command.ts"
 

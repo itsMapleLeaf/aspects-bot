@@ -1,5 +1,5 @@
 import * as Discord from "discord.js"
-import { characterCommands } from "./characters/characters-command.ts"
+import { characterCommands } from "./characters/characterCommands.ts"
 import { rollCommand } from "./dice/roll-command.ts"
 import { useCommands } from "./discord/command-handler.ts"
 import { env } from "./env.ts"

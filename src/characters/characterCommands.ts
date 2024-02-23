@@ -11,7 +11,7 @@ import {
 	listRaces,
 } from "../game-data.ts"
 import { CharacterModel } from "./CharacterModel.ts"
-import { characterOption } from "./character-option.ts"
+import { characterOption } from "./characterOption.ts"
 
 const raceChoices = (await listRaces()).map((race) => ({
 	name: race.name,
