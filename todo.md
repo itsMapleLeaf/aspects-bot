@@ -9,13 +9,30 @@
 - [x] /characters assign [name] [player]
 - [x] track currency
 - [x] generate NPC names
-- [ ] /milestone - leveling up
-- [ ] combat
+
+- combat
+	- /combat start
+		- [x] shows a select menu to choose combat participants
+		- [ ] add select menu to choose initiative attribute, mobility by default
+		- [x] shows a button to confirm and start combat
+		- [ ] disable the start button if participants < 2
+		- [ ] start button should roll initiative for each player and create the combat object
+		- [ ] cancel button
+		- [ ] pagination
+	- /combat end
+		- [ ] ends combat
+	- /combat show/info/current/whatever
+		- [ ] if combat is not running, show a message saying so
+		- if combat is running
+			- [ ] show the current round, list of characters with initiative, and the current character's turn
+			- [ ] advance button
+			- [ ] rewind button
+	- [ ] /combat add/remove [character]
+
 - [ ] items
 - [ ] /heal [amount?] - heal health
 - [ ] /rest [hours?] - heal fatigue
-- [ ] /learn [skill] - learn a new skill
-- [ ] /forget [skill] - forget a skill
+- [ ] /milestone - leveling up
 - [ ] buttons to reroll with daunting/eased/normal
 - [ ] button to reroll with different attribute
 - [ ] button to reroll with different difficulty

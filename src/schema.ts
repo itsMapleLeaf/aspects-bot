@@ -146,3 +146,48 @@ export const playersTable = sqliteTable("players", {
 export const playersRelations = relations(playersTable, (helpers) => ({
 	character: helpers.one(charactersTable),
 }))
+
+export const combatStatesTable = sqliteTable("combatStates", {
+	discordGuildId: text("discordGuildId").primaryKey(),
+	round: int("round").notNull().default(1),
+	participantIndex: int("participantIndex").notNull().default(0),
+})
+
+export const combatStatesRelations = relations(
+	combatStatesTable,
+	(helpers) => ({
+		participants: helpers.many(combatParticipantsTable),
+	}),
+)
+
+export const combatParticipantsTable = sqliteTable(
+	"combatParticipants",
+	{
+		characterId: text("characterId")
+			.notNull()
+			.references(() => charactersTable.id, { onDelete: "cascade" }),
+		combatStateGuildId: text("combatStateGuildId")
+			.notNull()
+			.references(() => combatStatesTable.discordGuildId, {
+				onDelete: "cascade",
+			}),
+		initiative: int("initiative").notNull(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.characterId, table.combatStateGuildId] }),
+	}),
+)
+
+export const combatParticipantsRelations = relations(
+	combatParticipantsTable,
+	(helpers) => ({
+		character: helpers.one(charactersTable, {
+			fields: [combatParticipantsTable.characterId],
+			references: [charactersTable.id],
+		}),
+		combatState: helpers.one(combatStatesTable, {
+			fields: [combatParticipantsTable.combatStateGuildId],
+			references: [combatStatesTable.discordGuildId],
+		}),
+	}),
+)
