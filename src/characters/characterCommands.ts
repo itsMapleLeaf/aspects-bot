@@ -100,6 +100,7 @@ export const characterCommands = [
 			await interaction.reply({
 				content: createCharacterMessage(character),
 				ephemeral: !options.public,
+				allowedMentions: { users: [], roles: [] },
 			})
 		},
 	}),
@@ -151,6 +152,7 @@ export const characterCommands = [
 				content: [`Updated **${character.data.name}**:`, ...diffLines].join(
 					"\n",
 				),
+				allowedMentions: { users: [], roles: [] },
 
 				// temporary: make this private when called by the gm
 				// ideally, this'll later be based on a character visibility setting
