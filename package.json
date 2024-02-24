@@ -2,7 +2,7 @@
 	"name": "aspects-bot",
 	"type": "module",
 	"scripts": {
-		"dev": "tsx watch ./src/main.ts",
+		"dev": "tsx --watch --watch-preserve-output ./src/main.ts",
 		"db:push": "drizzle-kit push:sqlite"
 	},
 	"dependencies": {
