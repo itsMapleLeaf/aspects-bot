@@ -54,10 +54,10 @@ export async function loadGameData() {
 		}),
 	])
 
-	for (const doc of racesResponse.results) {
-		const name = getPropertyText((doc as any).properties.Name)
+	for (const result of racesResponse.results) {
+		const name = getPropertyText((result as any).properties.Name)
 
-		const abilities = getPropertyText((doc as any).properties.Abilities)
+		const abilities = getPropertyText((result as any).properties.Abilities)
 			.split("\n")
 			.map((line: string) => line.split(/\s-\s/g))
 			.map(([name, description]: [string, string]) => ({ name, description }))
@@ -67,8 +67,12 @@ export async function loadGameData() {
 			.values({
 				id: kebabCase(name),
 				name,
+				emoji: (result as any).icon?.emoji,
 			})
-			.onConflictDoNothing()
+			.onConflictDoUpdate({
+				target: [schema.racesTable.id],
+				set: { emoji: (result as any).icon?.emoji },
+			})
 
 		for (const ability of abilities) {
 			await db
@@ -98,9 +102,17 @@ export async function loadGameData() {
 				id: kebabCase(name),
 				name,
 				description,
+				emoji: (result as any).icon?.emoji,
 				attributeId: kebabCase(attributeName),
 			})
-			.onConflictDoNothing()
+			.onConflictDoUpdate({
+				target: [schema.aspectsTable.id],
+				set: {
+					description,
+					emoji: (result as any).icon?.emoji,
+					attributeId: kebabCase(attributeName),
+				},
+			})
 	}
 
 	for (const result of attributesResponse.results) {
@@ -118,9 +130,17 @@ export async function loadGameData() {
 				id: kebabCase(name),
 				name,
 				description,
+				emoji: (result as any).icon?.emoji,
 				aspectId: kebabCase(aspectName),
 			})
-			.onConflictDoNothing()
+			.onConflictDoUpdate({
+				target: [schema.attributesTable.id],
+				set: {
+					description,
+					emoji: (result as any).icon?.emoji,
+					aspectId: kebabCase(aspectName),
+				},
+			})
 	}
 
 	for (const result of generalSkillsResponse.results) {
@@ -142,7 +162,14 @@ export async function loadGameData() {
 				difficulty,
 				attributeId: kebabCase(attributeName),
 			})
-			.onConflictDoNothing()
+			.onConflictDoUpdate({
+				target: [schema.generalSkillsTable.id],
+				set: {
+					description,
+					difficulty,
+					attributeId: kebabCase(attributeName),
+				},
+			})
 	}
 
 	for (const result of aspectSkillsResponse.results) {

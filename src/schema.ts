@@ -4,6 +4,7 @@ import { int, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
 export const racesTable = sqliteTable("races", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
+	emoji: text("emoji").default(""),
 })
 
 export const racesRelations = relations(racesTable, (helpers) => ({
@@ -27,6 +28,7 @@ export const raceAbilitiesRelations = relations(
 export const aspectsTable = sqliteTable("aspects", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
+	emoji: text("emoji").default(""),
 	description: text("description").notNull(),
 	attributeId: text("attributeId").notNull(),
 })
@@ -42,7 +44,9 @@ export const attributesTable = sqliteTable("attributes", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
 	description: text("description").notNull(),
+	emoji: text("emoji").default(""),
 	aspectId: text("aspectId").notNull(),
+	order: int("order"),
 })
 
 export const attributesRelations = relations(attributesTable, (helpers) => ({
