@@ -1,0 +1,6 @@
+{
+	"import * as Discord from \"discord.js\"": {
+		"prefix": ["importdiscord", "imd"],
+		"body": "import * as Discord from \"discord.js\""
+	}
+}
