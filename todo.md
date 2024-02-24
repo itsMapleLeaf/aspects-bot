@@ -7,8 +7,11 @@
 - [x] add autocomplete for characters to character commands
 - [x] /characters view [name]
 - [x] /characters assign [name] [player]
-- [ ] track currency
+- [x] track currency
+- [ ] separate commands for creating a player and creating an npc
 - [ ] /milestone - leveling up
+- [ ] combat
+- [ ] items
 - [ ] /heal [amount?] - heal health
 - [ ] /rest [hours?] - heal fatigue
 - [ ] /learn [skill] - learn a new skill
