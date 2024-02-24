@@ -1,19 +1,21 @@
 import { bold, mention } from "../discord/format.ts"
-import { CharacterModel } from "./CharacterModel.ts"
+import { join, map, range } from "../helpers/iterable.ts"
+import { CharacterData } from "./CharacterData.ts"
 
-export function createCharacterMessage(character: CharacterModel) {
+export function createCharacterMessage(character: CharacterData) {
 	const lines = [
-		`## ${character.data.name}`,
+		`## ${character.name}`,
 		``,
 
-		`${character.data.race.emoji} ${bold(character.data.race.name)}`,
-		`${character.data.aspect.emoji} ${bold(character.data.aspect.name)} (${
-			character.data.aspect.attribute.emoji
-		} ${character.data.aspect.attribute.name})`,
-		`🪙 ${bold(character.data.currency)} Notes`,
+		`${character.race.emoji} ${bold(character.race.name)}`,
+		`${character.aspect.emoji} ${bold(character.aspect.name)} (${
+			character.aspect.attribute.emoji
+		} ${character.aspect.attribute.name})`,
+		`🪙 ${bold(character.currency)} Notes`,
 		``,
 
-		...character.baseAttributeDice.map(
+		...map(
+			character.baseAttributeDice.values(),
 			(entry) =>
 				`${entry.attribute.emoji} ${entry.attribute.name}: ${bold(
 					`d${entry.die}`,
@@ -22,29 +24,25 @@ export function createCharacterMessage(character: CharacterModel) {
 		``,
 
 		`❤️‍🩹 Health`,
-		range(character.maxHealth)
-			.map((n) => (n < character.data.health ? "🟥" : "⬛"))
-			.join(""),
+		join(
+			map(range(character.maxHealth), (n) =>
+				n < character.health ? "🟥" : "⬛",
+			),
+		),
 		``,
 	]
 
-	if (character.data.fatigue > 0) {
+	if (character.fatigue > 0) {
 		lines.push(
 			`💤 Fatigue`,
-			range(character.data.fatigue)
-				.map(() => "🟦")
-				.join(""),
+			join(map(range(character.fatigue), () => "🟦")),
 			``,
 		)
 	}
 
-	if (character.data.playerDiscordId) {
-		lines.push(`Played by ${mention(character.data.playerDiscordId)}`)
+	if (character.playerDiscordId) {
+		lines.push(`Played by ${mention(character.playerDiscordId)}`)
 	}
 
 	return lines.join("\n")
-}
-
-function range(length: number) {
-	return [...Array(length).keys()]
 }

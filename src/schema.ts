@@ -116,7 +116,7 @@ export const charactersTable = sqliteTable("characters", {
 		.references(() => attributesTable.id)
 		.notNull(),
 	health: int("health").notNull(),
-	fatigue: int("fatigue").notNull(),
+	fatigue: int("fatigue").notNull().default(0),
 	currency: int("currency").notNull().default(100),
 })
 

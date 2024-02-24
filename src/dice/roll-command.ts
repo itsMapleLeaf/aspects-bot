@@ -1,4 +1,4 @@
-import { CharacterModel } from "../characters/CharacterModel.ts"
+import { getCharacter, updateCharacter } from "../characters/CharacterData.ts"
 import { characterOption } from "../characters/characterOption.ts"
 import { optionTypes } from "../discord/slash-command-option.ts"
 import { defineSlashCommand } from "../discord/slash-command.ts"
@@ -29,8 +29,10 @@ export const rollCommand = defineSlashCommand({
 		character: characterOption("The character to roll for"),
 	},
 	run: async (interaction, options) => {
-		const character = await CharacterModel.fromPlayer(interaction.user)
-		const fatigue = options.fatigue ?? character?.data.fatigue
+		const character = await getCharacter({
+			discordUser: interaction.user,
+		})
+		const fatigue = options.fatigue ?? character?.fatigue
 
 		const firstActionDie = Math.floor(Math.random() * options.die + 1)
 		let secondActionDie
@@ -78,12 +80,12 @@ export const rollCommand = defineSlashCommand({
 		if (fatigueDamage > 0) {
 			valueLines.push(`💔 Fatigue Damage: **${fatigueDamage}**`)
 			if (character) {
-				const previousHealth = character.data.health
-				await character.update({
+				const previousHealth = character.health
+				await updateCharacter(character.id, {
 					health: Math.max(0, previousHealth - fatigueDamage),
 				})
 				valueLines.push(
-					`❤️‍🩹 Health: **${previousHealth}** -> **${character.data.health}**`,
+					`❤️‍🩹 Health: **${previousHealth}** -> **${character.health}**`,
 				)
 			}
 		}
