@@ -11,3 +11,5 @@ export type AllKeys<T> = T extends unknown ? keyof T : never
 export type StrictOmit<T, K extends keyof T> = T extends unknown
 	? Omit<T, K>
 	: never
+
+export type MaybeArray<T> = T | T[]

@@ -77,6 +77,7 @@ export const characterCommands = [
 
 	defineSlashCommand({
 		name: "show",
+		aliases: ["view", "info"],
 		description: "Show character details",
 		options: {
 			name: characterOption("The character to show. Omit to use your own"),
@@ -107,6 +108,7 @@ export const characterCommands = [
 
 	defineSlashCommand({
 		name: "set",
+		aliases: ["update"],
 		description: "Set a character's attribute, skill, or aspect",
 		options: {
 			name: characterOption("The character to update. Omit to use your own"),

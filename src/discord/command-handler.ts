@@ -1,10 +1,11 @@
 import * as Discord from "discord.js"
 import { Client } from "discord.js"
 import { Logger } from "../logger.ts"
+import { MaybeArray } from "../types.ts"
 import { CommandError } from "./commands/CommandError.ts"
 
 export type Command = {
-	data: Discord.ApplicationCommandData
+	data: MaybeArray<Discord.ApplicationCommandData>
 	match: (interaction: Discord.Interaction) => CommandTask | undefined
 }
 
@@ -15,30 +16,32 @@ export type CommandTask = {
 
 export function useCommands(client: Client, commands: Command[]) {
 	client.on("ready", async (client) => {
+		const commandEntries = commands.flatMap((c) => c.data)
+		Logger.info`Using commands: ${commandEntries.map((c) => c.name).join(", ")}`
 		await Logger.async("Registering commands", async () => {
-			await client.application.commands.set(commands.map((c) => c.data))
+			await client.application.commands.set(commandEntries)
 		})
 	})
 
 	client.on("interactionCreate", async (interaction) => {
 		for (const command of commands) {
 			const task = command.match(interaction)
-			if (task) {
-				await Logger.async(`Running command: ${task.name}`, async () => {
-					try {
-						await task.run()
-					} catch (error) {
-						if (error instanceof CommandError && interaction.isRepliable()) {
-							return await addInteractionReply(interaction, {
-								content: error.message,
-								ephemeral: true,
-							})
-						}
-						throw error
+			if (!task) continue
+
+			await Logger.async(`Running command "${task.name}"`, async () => {
+				try {
+					await task.run()
+				} catch (error) {
+					if (error instanceof CommandError && interaction.isRepliable()) {
+						return await addInteractionReply(interaction, {
+							content: error.message,
+							ephemeral: true,
+						})
 					}
-				})
-				return
-			}
+					throw error
+				}
+			})
+			return
 		}
 	})
 }

@@ -5,29 +5,33 @@ import {
 	SlashCommandOptionValues,
 } from "./slash-command-option.ts"
 
-export type DiscordSlashCommandOptionData = Exclude<
-	Discord.ApplicationCommandOptionData,
-	| Discord.ApplicationCommandSubCommandData
-	| Discord.ApplicationCommandSubGroupData
->
-
-interface SlashCommandData extends Discord.ChatInputApplicationCommandData {
-	options: readonly DiscordSlashCommandOptionData[]
-}
-
 export interface SlashCommand extends Command {
 	type: "slash"
-	data: SlashCommandData
+	data: SlashCommandData[]
 	run: (interaction: Discord.ChatInputCommandInteraction) => Promise<void>
 	autocomplete: (
 		interaction: Discord.AutocompleteInteraction,
 	) => CommandTask | undefined
 }
 
-type SlashCommandArgs<Options extends Record<string, SlashCommandOption>> = {
+export interface SlashCommandData
+	extends Discord.ChatInputApplicationCommandData {
+	options: readonly DiscordSlashCommandOptionData[]
+}
+
+export type DiscordSlashCommandOptionData = Exclude<
+	Discord.ApplicationCommandOptionData,
+	| Discord.ApplicationCommandSubCommandData
+	| Discord.ApplicationCommandSubGroupData
+>
+
+export type SlashCommandArgs<
+	Options extends Record<string, SlashCommandOption>,
+> = {
 	name: string
 	description: string
 	options: Options
+	aliases?: string[]
 	data?: Partial<SlashCommandData>
 	run: (
 		interaction: Discord.ChatInputCommandInteraction,
@@ -82,18 +86,19 @@ export function defineSlashCommand<
 
 	return {
 		type: "slash",
-		data: {
+		data: [args.name, ...(args.aliases ?? [])].map((name) => ({
 			...args.data,
-			name: args.name,
+			name,
 			description: args.description,
 			options,
-		},
+		})),
 		run,
 		autocomplete,
 		match: (interaction) => {
 			if (
 				interaction.isChatInputCommand() &&
-				interaction.commandName === args.name
+				(interaction.commandName === args.name ||
+					args.aliases?.includes(interaction.commandName))
 			) {
 				return {
 					name: args.name,
@@ -105,7 +110,8 @@ export function defineSlashCommand<
 
 			if (
 				interaction.isAutocomplete() &&
-				interaction.commandName === args.name
+				(interaction.commandName === args.name ||
+					args.aliases?.includes(interaction.commandName))
 			) {
 				return autocomplete(interaction)
 			}
@@ -120,15 +126,26 @@ export function defineSlashCommandGroup(
 	description: string,
 	items: SlashCommand[],
 ): SlashCommandGroup {
+	function findSubcommand(
+		interaction:
+			| Discord.ChatInputCommandInteraction
+			| Discord.AutocompleteInteraction,
+	) {
+		const subcommandName = interaction.options.getSubcommand()
+		return items.find((item) =>
+			item.data.some((data) => data.name === subcommandName),
+		)
+	}
+
 	return {
 		data: {
 			name,
 			description,
-			options: items.map((item) => {
-				return {
-					...item.data,
+			options: items.flatMap((item) => {
+				return item.data.map((data) => ({
+					...data,
 					type: Discord.ApplicationCommandOptionType.Subcommand,
-				}
+				}))
 			}),
 		},
 		match: (interaction) => {
@@ -136,24 +153,20 @@ export function defineSlashCommandGroup(
 				interaction.isChatInputCommand() &&
 				interaction.commandName === name
 			) {
-				const command = items.find(
-					(item) => item.data.name === interaction.options.getSubcommand(),
-				)
-				if (command) {
-					return {
-						name: `${name} ${command.data.name}`,
-						async run() {
-							await command.run(interaction)
-						},
-					}
+				const subcommand = findSubcommand(interaction)
+				if (!subcommand) return
+
+				return {
+					name: `${name} ${interaction.options.getSubcommand()}`,
+					async run() {
+						await subcommand.run(interaction)
+					},
 				}
 			}
 
 			if (interaction.isAutocomplete() && interaction.commandName === name) {
-				const command = items.find(
-					(item) => item.data.name === interaction.options.getSubcommand(),
-				)
-				return command?.autocomplete?.(interaction)
+				const subcommand = findSubcommand(interaction)
+				return subcommand?.autocomplete?.(interaction)
 			}
 		},
 	}
