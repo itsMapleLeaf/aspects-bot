@@ -143,10 +143,18 @@ export const characterCommands = [
 				})
 				.filter(Boolean)
 
+			const isServerAdmin =
+				interaction.inCachedGuild() &&
+				interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)
+
 			await interaction.reply({
 				content: [`Updated **${character.data.name}**:`, ...diffLines].join(
 					"\n",
 				),
+
+				// temporary: make this private when called by the gm
+				// ideally, this'll later be based on a character visibility setting
+				ephemeral: isServerAdmin,
 			})
 		},
 	}),
