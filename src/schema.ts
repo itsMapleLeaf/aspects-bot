@@ -105,7 +105,6 @@ export const aspectSkillsToAspectsRelations = relations(
 export const charactersTable = sqliteTable("characters", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
-	playerDiscordId: text("playerDiscordId").unique(),
 	raceId: text("raceId")
 		.notNull()
 		.references(() => racesTable.id),
@@ -133,4 +132,17 @@ export const charactersRelations = relations(charactersTable, (helpers) => ({
 		fields: [charactersTable.secondaryAttributeId],
 		references: [attributesTable.id],
 	}),
+	player: helpers.one(playersTable, {
+		fields: [charactersTable.id],
+		references: [playersTable.characterId],
+	}),
+}))
+
+export const playersTable = sqliteTable("players", {
+	discordUserId: text("discordUserId").primaryKey(),
+	characterId: text("characterId").references(() => charactersTable.id),
+})
+
+export const playersRelations = relations(playersTable, (helpers) => ({
+	character: helpers.one(charactersTable),
 }))

@@ -19,6 +19,7 @@ import { aspectsTable, attributesTable, racesTable } from "../schema.ts"
 import {
 	createCharacter,
 	getCharacter,
+	setPlayerCharacter,
 	updateCharacter,
 } from "./CharacterData.ts"
 import { createCharacterMessage } from "./characterMessage.ts"
@@ -234,9 +235,7 @@ export const characterCommands = [
 				throw new CommandError("Sorry, I couldn't find that character.")
 			}
 
-			await updateCharacter(character.id, {
-				playerDiscordId: options.player.id,
-			})
+			await setPlayerCharacter(options.player.id, character.id)
 
 			await interaction.reply({
 				content: `Assigned **${character.name}** to <@${options.player.id}>.`,

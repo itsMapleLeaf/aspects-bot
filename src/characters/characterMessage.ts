@@ -40,8 +40,8 @@ export function createCharacterMessage(character: CharacterData) {
 		)
 	}
 
-	if (character.playerDiscordId) {
-		lines.push(`Played by ${mention(character.playerDiscordId)}`)
+	if (character.player) {
+		lines.push(`Played by ${mention(character.player.discordUserId)}`)
 	}
 
 	return lines.join("\n")
