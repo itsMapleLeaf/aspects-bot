@@ -1,5 +1,6 @@
 import * as Discord from "discord.js"
 import { Client } from "discord.js"
+import { inspect } from "node:util"
 import { firstWhereReturning } from "../helpers/iterable.ts"
 import { Logger } from "../logger.ts"
 import { MaybeArray } from "../types.ts"
@@ -19,7 +20,40 @@ export function useCommands(client: Client, commands: Command[]) {
 	client.on("ready", (client) => {
 		const data = commands.flatMap((c) => c.data)
 		Logger.info((f) => {
-			const names = data.map((c) => f.highlight(c.name))
+			const names = data
+				.flatMap((command) => {
+					if (
+						command.type !== Discord.ApplicationCommandType.ChatInput &&
+						command.type !== undefined
+					) {
+						return f.highlight(command.name)
+					}
+
+					const subcommandNames =
+						command.options?.flatMap((option) => {
+							if (
+								option.type === Discord.ApplicationCommandOptionType.Subcommand
+							) {
+								return option.name
+							}
+							if (
+								option.type ===
+								Discord.ApplicationCommandOptionType.SubcommandGroup
+							) {
+								return option.options.map((subcommand) => subcommand.name)
+							}
+							return []
+						}) ?? []
+
+					if (subcommandNames.length === 0) {
+						return command.name
+					}
+
+					return subcommandNames.map((subcommandName) => {
+						return `${f.highlight(command.name)} ${f.base(subcommandName)}`
+					})
+				})
+				.map((name) => `/${f.highlight(name)}`)
 			return `Using commands: ${names.join(", ")}`
 		})
 		Logger.async("Registering commands", async () => {
@@ -37,13 +71,17 @@ export function useCommands(client: Client, commands: Command[]) {
 				try {
 					await task.run()
 				} catch (error) {
-					if (error instanceof CommandError && interaction.isRepliable()) {
-						return await addInteractionReply(interaction, {
-							content: error.message,
+					Logger.error(inspect(error, { depth: 10 }))
+					if (interaction.isRepliable()) {
+						const message =
+							(error instanceof CommandError && error.message) ||
+							"Sorry, something went wrong. Try again?"
+
+						await addInteractionReply(interaction, {
+							content: message,
 							ephemeral: true,
 						})
 					}
-					throw error
 				}
 			},
 		)
