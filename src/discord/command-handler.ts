@@ -16,31 +16,37 @@ export type CommandTask = {
 }
 
 export function useCommands(client: Client, commands: Command[]) {
-	client.on("ready", async (client) => {
-		const commandEntries = commands.flatMap((c) => c.data)
-		Logger.info`Using commands: ${commandEntries.map((c) => c.name).join(", ")}`
-		await Logger.async("Registering commands", async () => {
-			await client.application.commands.set(commandEntries)
+	client.on("ready", (client) => {
+		const data = commands.flatMap((c) => c.data)
+		Logger.info((f) => {
+			const names = data.map((c) => f.highlight(c.name))
+			return `Using commands: ${names.join(", ")}`
+		})
+		Logger.async("Registering commands", async () => {
+			await client.application.commands.set(data)
 		})
 	})
 
-	client.on("interactionCreate", async (interaction) => {
+	client.on("interactionCreate", (interaction) => {
 		const task = firstWhereReturning(commands, (c) => c.match(interaction))
 		if (!task) return
 
-		await Logger.async(`Running command "${task.name}"`, async () => {
-			try {
-				await task.run()
-			} catch (error) {
-				if (error instanceof CommandError && interaction.isRepliable()) {
-					return await addInteractionReply(interaction, {
-						content: error.message,
-						ephemeral: true,
-					})
+		Logger.async(
+			(f) => f.base(`Running ${f.highlight(task.name)} command`),
+			async () => {
+				try {
+					await task.run()
+				} catch (error) {
+					if (error instanceof CommandError && interaction.isRepliable()) {
+						return await addInteractionReply(interaction, {
+							content: error.message,
+							ephemeral: true,
+						})
+					}
+					throw error
 				}
-				throw error
-			}
-		})
+			},
+		)
 	})
 }
 

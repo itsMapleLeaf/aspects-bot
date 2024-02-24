@@ -13,7 +13,7 @@ const client = new Discord.Client({
 })
 
 client.on("ready", (client) => {
-	Logger.info`Logged in as ${client.user?.tag}`
+	Logger.info((f) => `Logged in as ${f.highlight(client.user?.tag)}`)
 })
 
 useCommands(client, [rollCommand, ...characterCommands])
