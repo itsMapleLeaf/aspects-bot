@@ -4,10 +4,12 @@ import prettyMilliseconds from "pretty-ms"
 import { inspect } from "util"
 import { Awaitable } from "./types.ts"
 
+const escaped = Symbol("escaped")
+
 function defineLogFunction(
 	hue: number,
 	prefix: string,
-	writeText: (...args: unknown[]) => void,
+	writeText: (text: string) => void,
 ) {
 	const chroma = 0.1
 	const lightness = 0.7
@@ -20,25 +22,23 @@ function defineLogFunction(
 		new Color("oklch", [lightness * 1.15, chroma, hue]),
 	).bold
 
-	const log = (constants: TemplateStringsArray, ...dynamics: unknown[]) => {
+	return function log(constants: TemplateStringsArray, ...dynamics: unknown[]) {
 		const output = []
 		for (let i = 0; i < constants.length; i++) {
-			if (constants[i] !== "") {
-				output.push(base(constants[i].trim()))
-			}
+			output.push(base(constants[i]))
 			if (i < dynamics.length) {
 				let value = dynamics[i]
-				if (isObject(value)) {
-					output.push(inspect(value, { depth: 10 }))
-				} else {
+				if (!isObject(value)) {
 					output.push(highlighted(value))
+				} else if (escaped in value) {
+					output.push(base(value[escaped]))
+				} else {
+					output.push(inspect(value, { depth: 10 }))
 				}
 			}
 		}
-		writeText(dim(prefix), ...output)
+		writeText(`${dim(prefix)} ${output.join("")}`)
 	}
-
-	return log
 
 	function clamp(value: number, min: number, max: number) {
 		return Math.min(max, Math.max(min, value))
@@ -63,6 +63,8 @@ export type LoggerPromiseResult<T> =
 	| readonly [undefined, NonNullable<unknown>]
 
 export const Logger = {
+	escape: (value: unknown) => ({ [escaped]: value }),
+
 	info: defineLogFunction(240, "i", console.info),
 	success: defineLogFunction(150, "s", console.info),
 	warn: defineLogFunction(80, "w", console.warn),
@@ -72,7 +74,7 @@ export const Logger = {
 		prefix: string,
 		callback: () => Awaitable<T>,
 	): Promise<LoggerPromiseResult<T>> {
-		Logger.info`${prefix} ...`
+		Logger.info`${Logger.escape(prefix)}...`
 
 		const start = Date.now()
 		let result: LoggerPromiseResult<T>
@@ -83,7 +85,7 @@ export const Logger = {
 			result = [undefined, error == null ? new Error("Unknown error") : error]
 		}
 
-		const [value, error] = result
+		const [, error] = result
 		const duration = prettyMilliseconds(Date.now() - start)
 		if (error === undefined) {
 			Logger.success`${prefix} succeeded in ${duration}`
