@@ -5,7 +5,7 @@ import {
 	SlashCommandOptionValues,
 } from "./slash-command-option.ts"
 
-type DiscordSlashCommandOptionData = Exclude<
+export type DiscordSlashCommandOptionData = Exclude<
 	Discord.ApplicationCommandOptionData,
 	| Discord.ApplicationCommandSubCommandData
 	| Discord.ApplicationCommandSubGroupData
@@ -62,23 +62,31 @@ export function defineSlashCommand<
 		}
 	}
 
+	const options = Object.entries(args.options).map(([name, option]) => {
+		const data = {
+			...option.getData(name),
+			required: option.required ?? false,
+		}
+
+		switch (data.type) {
+			case Discord.ApplicationCommandOptionType.String:
+			case Discord.ApplicationCommandOptionType.Number:
+			case Discord.ApplicationCommandOptionType.Integer: {
+				return { ...data, autocomplete: !!option.autocomplete }
+			}
+			default: {
+				return data
+			}
+		}
+	})
+
 	return {
 		type: "slash",
 		data: {
 			...args.data,
 			name: args.name,
 			description: args.description,
-			options: Object.entries(args.options).map(
-				([name, option]) =>
-					({
-						...option.data,
-						name,
-						description: option.description,
-						type: option.type,
-						required: option.required ?? false,
-						autocomplete: !!option.autocomplete,
-					} as DiscordSlashCommandOptionData),
-			),
+			options,
 		},
 		run,
 		autocomplete,
