@@ -11,6 +11,7 @@ import {
 	listRaces,
 } from "../game-data.ts"
 import { CharacterModel } from "./CharacterModel.ts"
+import { createCharacterMessage } from "./characterMessage.ts"
 import { characterOption } from "./characterOption.ts"
 
 const raceChoices = (await listRaces()).map((race) => ({
@@ -68,8 +69,7 @@ export const characterCommands = [
 			})
 
 			await interaction.reply({
-				content: "Character created!",
-				embeds: [character.embed],
+				content: `Character created!\n${createCharacterMessage(character)}`,
 				ephemeral: true,
 			})
 		},
@@ -98,7 +98,7 @@ export const characterCommands = [
 			}
 
 			await interaction.reply({
-				embeds: [character.embed],
+				content: createCharacterMessage(character),
 				ephemeral: !options.public,
 			})
 		},

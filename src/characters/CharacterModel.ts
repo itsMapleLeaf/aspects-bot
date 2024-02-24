@@ -1,13 +1,11 @@
-import { APIEmbed, Snowflake } from "discord.js"
+import { Snowflake } from "discord.js"
 import { eq } from "drizzle-orm"
 import { kebabCase } from "lodash-es"
 import { db } from "../db.ts"
 import { CommandError } from "../discord/commands/CommandError.ts"
 import {
-	getAspect,
 	getAttribute,
 	getRace,
-	listAspects,
 	listAttributes,
 	listRaces,
 } from "../game-data.ts"
@@ -21,7 +19,9 @@ import {
 
 type CharacterModelData = typeof charactersTable.$inferSelect & {
 	race: typeof racesTable.$inferSelect
-	aspect: typeof aspectsTable.$inferSelect
+	aspect: typeof aspectsTable.$inferSelect & {
+		attribute: typeof attributesTable.$inferSelect
+	}
 }
 
 export class CharacterModel {
@@ -48,9 +48,13 @@ export class CharacterModel {
 			? await getRace(options.raceId)
 			: randomItem(await listRaces())
 
-		const aspects = await listAspects()
+		const aspects = await db.query.aspectsTable.findMany({
+			with: { attribute: true },
+		})
+
 		const aspect = options.aspectId
-			? await getAspect(options.aspectId)
+			? aspects.find((a) => a.id === options.aspectId) ??
+			  raise(`Aspect "${options.aspectId}" not found`)
 			: randomItem(aspects)
 
 		const attributes = await listAttributes()
@@ -88,7 +92,9 @@ export class CharacterModel {
 				where: eq(charactersTable.id, characterId),
 				with: {
 					race: true,
-					aspect: true,
+					aspect: {
+						with: { attribute: true },
+					},
 				},
 			})) ?? raise(new CommandError("Couldn't find that character."))
 
@@ -102,7 +108,9 @@ export class CharacterModel {
 			where: eq(charactersTable.playerDiscordId, user.id),
 			with: {
 				race: true,
-				aspect: true,
+				aspect: {
+					with: { attribute: true },
+				},
 			},
 		})
 		if (!character) return
@@ -136,44 +144,6 @@ export class CharacterModel {
 
 	get maxHealth() {
 		return this.getAttributeDie("strength") * 2
-	}
-
-	get embed(): APIEmbed {
-		return {
-			title: this.#data.name,
-			fields: [
-				{
-					name: "Player",
-					value: this.#data.playerDiscordId
-						? `<@${this.#data.playerDiscordId}>`
-						: "NPC",
-				},
-				{
-					name: "Race",
-					value: this.#data.race.name,
-				},
-				{
-					name: "Aspect",
-					value: this.#data.aspect.name,
-				},
-				...this.baseAttributeDice.map((entry) => ({
-					name: entry.attribute.name,
-					value: `d${entry.die}`,
-				})),
-				{
-					name: "Health",
-					value: `${this.#data.health}/${this.maxHealth}`,
-				},
-				{
-					name: "Fatigue",
-					value: `${this.#data.fatigue}`,
-				},
-				{
-					name: "Notes",
-					value: `${this.#data.currency}`,
-				},
-			],
-		}
 	}
 
 	async update(values: Partial<typeof charactersTable.$inferInsert>) {
