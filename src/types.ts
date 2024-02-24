@@ -13,3 +13,7 @@ export type StrictOmit<T, K extends keyof T> = T extends unknown
 	: never
 
 export type MaybeArray<T> = T | T[]
+
+export type Falsy = false | 0 | 0n | "" | null | undefined
+
+export type Truthy<T> = Exclude<T, Falsy>

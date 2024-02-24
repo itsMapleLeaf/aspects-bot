@@ -1,5 +1,6 @@
 import * as Discord from "discord.js"
 import { Client } from "discord.js"
+import { firstWhereReturning } from "../helpers/iterable.ts"
 import { Logger } from "../logger.ts"
 import { MaybeArray } from "../types.ts"
 import { CommandError } from "./commands/CommandError.ts"
@@ -24,25 +25,22 @@ export function useCommands(client: Client, commands: Command[]) {
 	})
 
 	client.on("interactionCreate", async (interaction) => {
-		for (const command of commands) {
-			const task = command.match(interaction)
-			if (!task) continue
+		const task = firstWhereReturning(commands, (c) => c.match(interaction))
+		if (!task) return
 
-			await Logger.async(`Running command "${task.name}"`, async () => {
-				try {
-					await task.run()
-				} catch (error) {
-					if (error instanceof CommandError && interaction.isRepliable()) {
-						return await addInteractionReply(interaction, {
-							content: error.message,
-							ephemeral: true,
-						})
-					}
-					throw error
+		await Logger.async(`Running command "${task.name}"`, async () => {
+			try {
+				await task.run()
+			} catch (error) {
+				if (error instanceof CommandError && interaction.isRepliable()) {
+					return await addInteractionReply(interaction, {
+						content: error.message,
+						ephemeral: true,
+					})
 				}
-			})
-			return
-		}
+				throw error
+			}
+		})
 	})
 }
 
