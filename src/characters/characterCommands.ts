@@ -14,6 +14,7 @@ import {
 } from "../game-data.ts"
 import { raise } from "../helpers/errors.ts"
 import { expect } from "../helpers/expect.ts"
+import { randomItem } from "../helpers/random.ts"
 import { aspectsTable, attributesTable, racesTable } from "../schema.ts"
 import {
 	createCharacter,
@@ -21,6 +22,7 @@ import {
 	updateCharacter,
 } from "./CharacterData.ts"
 import { createCharacterMessage } from "./characterMessage.ts"
+import { characterNames } from "./characterNames.ts"
 import { characterOption } from "./characterOption.ts"
 
 const raceChoices = (await listRaces()).map((race) => ({
@@ -54,7 +56,7 @@ export const characterCommands = [
 			defaultMemberPermissions: [PermissionFlagsBits.ManageGuild],
 		},
 		options: {
-			name: t.required(t.string("The character's name")),
+			name: t.string("The character's name"),
 			player: t.user("The player of the character"),
 			race: t.string("The character's race", { choices: raceChoices }),
 			aspect: t.string("The character's aspect", { choices: aspectChoices }),
@@ -118,7 +120,7 @@ export const characterCommands = [
 			}
 
 			const character = await createCharacter({
-				name: options.name,
+				name: options.name ?? randomItem(characterNames),
 				playerDiscordId: options.player?.id ?? null,
 				aspectId,
 				raceId,

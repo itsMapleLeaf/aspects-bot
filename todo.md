@@ -8,7 +8,7 @@
 - [x] /characters view [name]
 - [x] /characters assign [name] [player]
 - [x] track currency
-- [ ] separate commands for creating a player and creating an npc
+- [x] generate NPC names
 - [ ] /milestone - leveling up
 - [ ] combat
 - [ ] items
