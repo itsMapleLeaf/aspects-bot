@@ -1,6 +1,7 @@
 import * as Discord from "discord.js"
 import { characterCommands } from "./characters/characterCommands.ts"
-import { combatCommands, participantSelector } from "./combat/combatCommands.ts"
+import { combatCommands } from "./combat/combatCommands.ts"
+import { participantSelector } from "./combat/participantSelector.ts"
 import { rollCommand } from "./dice/roll-command.ts"
 import { useCommands } from "./discord/command-handler.ts"
 import { useMessageComponents } from "./discord/message-component-renderer.ts"
