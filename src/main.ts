@@ -1,10 +1,10 @@
 import * as Discord from "discord.js"
 import { characterCommands } from "./characters/characterCommands.ts"
+import { participantSelector } from "./combat/ParticipantSelector.ts"
 import { combatCommands } from "./combat/combatCommands.ts"
-import { participantSelector } from "./combat/participantSelector.ts"
 import { rollCommand } from "./dice/roll-command.ts"
 import { useCommands } from "./discord/command-handler.ts"
-import { useMessageComponents } from "./discord/message-component-renderer.ts"
+import { useInteractionHandlers } from "./discord/interactions/InteractionHandler.ts"
 import { env } from "./env.ts"
 import { Logger } from "./logger.ts"
 
@@ -20,6 +20,6 @@ client.on("ready", (client) => {
 })
 
 useCommands(client, [rollCommand, ...characterCommands, ...combatCommands])
-useMessageComponents(client, [participantSelector])
+useInteractionHandlers(client, [participantSelector])
 
 await Logger.async("Logging in", () => client.login(env.DISCORD_BOT_TOKEN))

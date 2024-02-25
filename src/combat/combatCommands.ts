@@ -3,7 +3,7 @@ import {
 	defineSlashCommand,
 	defineSlashCommandGroup,
 } from "../discord/slash-command.ts"
-import { participantSelector } from "./participantSelector.ts"
+import { participantSelector } from "./ParticipantSelector.ts"
 
 export const combatCommands = [
 	defineSlashCommandGroup("combat", "Manage combat", [

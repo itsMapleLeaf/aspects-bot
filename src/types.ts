@@ -17,3 +17,5 @@ export type MaybeArray<T> = T | T[]
 export type Falsy = false | 0 | 0n | "" | null | undefined
 
 export type Truthy<T> = Exclude<T, Falsy>
+
+export type Simplify<T> = { [K in keyof T]: T[K] } & {}
