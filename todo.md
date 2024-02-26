@@ -13,20 +13,20 @@
 - combat
 	- /combat start
 		- [x] shows a select menu to choose combat participants
-		- [ ] add select menu to choose initiative attribute, mobility by default
+		- [x] add select menu to choose initiative attribute, mobility by default
 		- [x] shows a button to confirm and start combat
-		- [ ] disable the start button if participants < 2
-		- [ ] start button should roll initiative for each player and create the combat object
-		- [ ] cancel button
+		- [x] require at least 2 participants
+		- [x] start button should roll initiative for each player and create the combat object
 		- [ ] pagination
 	- /combat end
-		- [ ] ends combat
+		- [x] deletes the combat object
 	- /combat show/info/current/whatever
-		- [ ] if combat is not running, show a message saying so
+		- [x] if combat is not running, show a message saying so
 		- if combat is running
-			- [ ] show the current round, list of characters with initiative, and the current character's turn
-			- [ ] advance button
-			- [ ] rewind button
+			- [x] show the current round, list of characters with initiative, and the current character's turn
+			- [x] advance button
+			- [x] rewind button
+			- [x] end combat button
 	- [ ] /combat add/remove [character]
 
 - [ ] items
