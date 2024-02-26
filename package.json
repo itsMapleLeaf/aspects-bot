@@ -2,7 +2,7 @@
 	"name": "aspects-bot",
 	"type": "module",
 	"scripts": {
-		"dev": "tsx --watch-path=src --watch-preserve-output src/main.ts",
+		"dev": "tsx --watch-path=src --watch-preserve-output --enable-source-maps src/main.ts",
 		"test": "tsx --test",
 		"db:push": "drizzle-kit push:sqlite"
 	},
