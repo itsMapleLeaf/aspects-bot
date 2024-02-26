@@ -25,6 +25,7 @@
 		"@types/better-sqlite3": "7.6.9",
 		"@types/lodash-es": "4.17.12",
 		"@types/node": "20.11.19",
+		"prettier": "3.2.5",
 		"tsx": "4.7.1",
 		"typescript": "5.4.1-rc"
 	}
