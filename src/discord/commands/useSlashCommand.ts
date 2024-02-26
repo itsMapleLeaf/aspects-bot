@@ -1,6 +1,6 @@
 import * as Discord from "discord.js"
 import { Simplify } from "../../types.ts"
-import { SlashCommandStore } from "./useSlashCommands.ts"
+import { SlashCommandContext } from "./SlashCommandContext.ts"
 
 type UseSlashCommandArgs<Options extends Record<string, Option>> = {
 	description: string
@@ -12,10 +12,10 @@ type UseSlashCommandArgs<Options extends Record<string, Option>> = {
 }
 
 export function useSlashCommand<Options extends Record<string, Option>>(
-	store: SlashCommandStore,
 	name: string,
 	args: UseSlashCommandArgs<Options>,
 ) {
+	const store = SlashCommandContext.use()
 	const options = args.options(optionTypes)
 	store.commands.set(name, {
 		data: (name) => ({

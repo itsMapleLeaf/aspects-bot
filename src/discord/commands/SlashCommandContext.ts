@@ -1,4 +1,5 @@
 import * as Discord from "discord.js"
+import { createContext } from "../../hooks/context.ts"
 
 type SlashCommand = {
 	data: (name: string) => Discord.ApplicationCommandData
@@ -9,9 +10,7 @@ type SlashCommand = {
 	}) => Promise<void>
 }
 
-export type SlashCommandStore = ReturnType<typeof useSlashCommands>
-
-export function useSlashCommands(client: Discord.Client) {
+export const SlashCommandContext = createContext((client: Discord.Client) => {
 	const commands = new Map<string, SlashCommand>()
 
 	client.on("ready", async (client) => {
@@ -27,4 +26,4 @@ export function useSlashCommands(client: Discord.Client) {
 	})
 
 	return { commands }
-}
+})

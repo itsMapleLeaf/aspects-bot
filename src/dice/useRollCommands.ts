@@ -1,13 +1,12 @@
 import * as Discord from "discord.js"
-import { SlashCommandStore } from "../discord/commands/useSlashCommands.ts"
-import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
-import { db } from "../db.ts"
-import { charactersTable } from "../schema.ts"
 import { getCharacter, updateCharacter } from "../characters/CharacterData.ts"
-import { roll } from "./roll.ts"
+import { db } from "../db.ts"
+import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
 import { join, map, range } from "../helpers/iterable.ts"
+import { charactersTable } from "../schema.ts"
+import { roll } from "./roll.ts"
 
-export function useRollCommands(store: SlashCommandStore) {
+export function useRollCommands() {
 	const attributeDice = [4, 6, 8, 12, 20] as const
 
 	const diceChoices = attributeDice.map((value) => ({
@@ -20,7 +19,7 @@ export function useRollCommands(store: SlashCommandStore) {
 		{ name: "daunting", value: "daunting" },
 	] as const
 
-	useSlashCommand(store, "roll", {
+	useSlashCommand("roll", {
 		description: "Make a simple dice roll",
 
 		options: (t) => ({
@@ -51,7 +50,7 @@ export function useRollCommands(store: SlashCommandStore) {
 		},
 	})
 
-	useSlashCommand(store, "action", {
+	useSlashCommand("action", {
 		description: "Make an action roll",
 
 		options: (t) => ({
