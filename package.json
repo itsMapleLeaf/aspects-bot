@@ -2,7 +2,8 @@
 	"name": "aspects-bot",
 	"type": "module",
 	"scripts": {
-		"dev": "tsx watch --clear-screen=false ./src/main.ts",
+		"dev": "node --import tsx --watch-path=src --watch-preserve-output src/main.ts",
+		"test": "tsx --test",
 		"db:push": "drizzle-kit push:sqlite"
 	},
 	"dependencies": {
@@ -16,6 +17,7 @@
 		"drizzle-orm": "0.29.3",
 		"lodash-es": "4.17.21",
 		"pretty-ms": "9.0.0",
+		"ts-dedent": "2.2.0",
 		"zod": "3.22.4"
 	},
 	"devDependencies": {

@@ -151,12 +151,19 @@ export const combatStatesTable = sqliteTable("combatStates", {
 	discordGuildId: text("discordGuildId").primaryKey(),
 	round: int("round").notNull().default(1),
 	participantIndex: int("participantIndex").notNull().default(0),
+	initiativeAttributeId: text("initiativeAttributeId")
+		.notNull()
+		.references(() => attributesTable.id),
 })
 
 export const combatStatesRelations = relations(
 	combatStatesTable,
 	(helpers) => ({
 		participants: helpers.many(combatParticipantsTable),
+		initiativeAttribute: helpers.one(attributesTable, {
+			fields: [combatStatesTable.initiativeAttributeId],
+			references: [attributesTable.id],
+		}),
 	}),
 )
 

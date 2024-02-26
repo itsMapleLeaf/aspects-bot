@@ -1,6 +1,7 @@
 import * as Discord from "discord.js"
 import { characterCommands } from "./characters/characterCommands.ts"
-import { participantSelector } from "./combat/ParticipantSelector.ts"
+import { combatTracker } from "./combat/CombatTracker.ts"
+import { combatSetup } from "./combat/CombatSetup.ts"
 import { combatCommands } from "./combat/combatCommands.ts"
 import { rollCommand } from "./dice/roll-command.ts"
 import { useCommands } from "./discord/command-handler.ts"
@@ -20,6 +21,6 @@ client.on("ready", (client) => {
 })
 
 useCommands(client, [rollCommand, ...characterCommands, ...combatCommands])
-useInteractionHandlers(client, [participantSelector])
+useInteractionHandlers(client, [combatSetup, combatTracker])
 
 await Logger.async("Logging in", () => client.login(env.DISCORD_BOT_TOKEN))

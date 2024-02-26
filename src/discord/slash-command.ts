@@ -60,7 +60,7 @@ export function defineSlashCommand<
 		return {
 			name: `autocomplete(${args.name}:${focused.name})`,
 			async run() {
-				const choices = await option.autocomplete?.(focused.value.trim())
+				const choices = await option?.autocomplete?.(focused.value.trim())
 				await interaction.respond(choices ?? [])
 			},
 		}

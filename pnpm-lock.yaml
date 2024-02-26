@@ -35,6 +35,9 @@ dependencies:
   pretty-ms:
     specifier: 9.0.0
     version: 9.0.0
+  ts-dedent:
+    specifier: 2.2.0
+    version: 2.2.0
   zod:
     specifier: 3.22.4
     version: 3.22.4
@@ -1392,6 +1395,11 @@ packages:
 
   /tr46@0.0.3:
     resolution: {integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==}
+    dev: false
+
+  /ts-dedent@2.2.0:
+    resolution: {integrity: sha512-q5W7tVM71e2xjHZTlgfTDoPF/SmqKG5hddq9SzR49CH2hayqRKJtQ4mtRlSxKaJlR/+9rEM+mnBHf7I2/BQcpQ==}
+    engines: {node: '>=6.10'}
     dev: false
 
   /ts-mixer@6.0.4:

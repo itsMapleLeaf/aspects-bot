@@ -2,18 +2,27 @@ import { and, eq, notInArray } from "drizzle-orm"
 import { db } from "../db.ts"
 import { expect } from "../helpers/expect.ts"
 import {
+	aspectsTable,
+	attributesTable,
 	charactersTable,
 	combatParticipantsTable,
 	combatStatesTable,
+	playersTable,
+	racesTable,
 } from "../schema.ts"
 
 export type CombatState = typeof combatStatesTable.$inferSelect & {
+	initiativeAttribute: typeof attributesTable.$inferSelect
 	participants: CombatParticipant[]
 	currentParticipant: CombatParticipant | undefined
 }
 
 type CombatParticipant = typeof combatParticipantsTable.$inferSelect & {
-	character: typeof charactersTable.$inferSelect
+	character: typeof charactersTable.$inferSelect & {
+		player: typeof playersTable.$inferSelect | null
+		aspect: typeof aspectsTable.$inferSelect
+		race: typeof racesTable.$inferSelect
+	}
 }
 
 export async function getCombatState(guild: {
@@ -22,10 +31,18 @@ export async function getCombatState(guild: {
 	const state = await db.query.combatStatesTable.findFirst({
 		where: (fields, ops) => ops.eq(fields.discordGuildId, guild.id),
 		with: {
+			initiativeAttribute: true,
 			participants: {
 				with: {
-					character: true,
+					character: {
+						with: {
+							player: true,
+							aspect: true,
+							race: true,
+						},
+					},
 				},
+				orderBy: (fields, ops) => ops.desc(fields.initiative),
 			},
 		},
 	})
@@ -37,29 +54,45 @@ export async function getCombatState(guild: {
 	)
 }
 
-export async function startCombat(guild: { id: string }): Promise<CombatState> {
-	const state = db
-		.insert(combatStatesTable)
-		.values({ discordGuildId: guild.id })
-		.onConflictDoNothing()
-		.returning()
-		.get()
+export async function startCombat({
+	guild,
+	initiativeAttributeId,
+	...args
+}: {
+	guild: { id: string }
+	participants: { characterId: string; initiative: number }[]
+	initiativeAttributeId: string
+}): Promise<CombatState> {
+	await db.transaction(async (db) => {
+		const state = db
+			.insert(combatStatesTable)
+			.values({ discordGuildId: guild.id, initiativeAttributeId })
+			.onConflictDoNothing()
+			.returning()
+			.get()
 
-	const { participants } = expect(
-		await db.query.combatStatesTable.findFirst({
-			where: (fields, ops) => ops.eq(fields.discordGuildId, guild.id),
-			columns: {},
-			with: {
-				participants: {
-					with: {
-						character: true,
+		for (const participant of args.participants) {
+			db.insert(combatParticipantsTable)
+				.values({ ...participant, combatStateGuildId: guild.id })
+				.onConflictDoUpdate({
+					target: [
+						combatParticipantsTable.characterId,
+						combatParticipantsTable.combatStateGuildId,
+					],
+					set: {
+						initiative: participant.initiative,
 					},
-				},
-			},
-		}),
-	)
+				})
+				.returning()
+				.get()
+		}
 
-	return { ...state, participants, currentParticipant: participants[0] }
+		return state
+	})
+	return expect(
+		await getCombatState({ id: guild.id }),
+		"Failed to create combat state",
+	)
 }
 
 export async function endCombat(guild: { id: string }) {

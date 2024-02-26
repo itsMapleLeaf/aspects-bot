@@ -2,6 +2,7 @@ import { getCharacter, updateCharacter } from "../characters/CharacterData.ts"
 import { characterOption } from "../characters/characterOption.ts"
 import { optionTypes } from "../discord/slash-command-option.ts"
 import { defineSlashCommand } from "../discord/slash-command.ts"
+import { roll } from "./roll.ts"
 
 export const rollCommand = defineSlashCommand({
 	name: "roll",
@@ -15,10 +16,10 @@ export const rollCommand = defineSlashCommand({
 				})),
 			}),
 		),
-		difficulty: optionTypes.string("The difficulty die to roll against", {
-			choices: ["d4", "d6", "d8", "d12", "d20"].map((d) => ({
-				name: d,
-				value: d,
+		difficulty: optionTypes.integer("The difficulty die to roll against", {
+			choices: [4, 6, 8, 12, 20].map((value) => ({
+				name: `d${value}`,
+				value: value,
 			})),
 		}),
 		modify: optionTypes.string("Make the roll easier or harder", {
@@ -34,29 +35,26 @@ export const rollCommand = defineSlashCommand({
 		})
 		const fatigue = options.fatigue ?? character?.fatigue
 
-		const firstActionDie = Math.floor(Math.random() * options.die + 1)
+		const firstActionDie = roll(options.die)
 		let secondActionDie
 		let actionResult = firstActionDie
 		let difficultyResult
 		let fatigueResults
 
 		if (options.modify === "eased") {
-			secondActionDie = Math.floor(Math.random() * options.die + 1)
+			secondActionDie = roll(options.die)
 			actionResult = Math.max(firstActionDie, secondActionDie)
 		} else if (options.modify === "daunting") {
-			secondActionDie = Math.floor(Math.random() * options.die + 1)
+			secondActionDie = roll(options.die)
 			actionResult = Math.min(firstActionDie, secondActionDie)
 		}
 
 		if (options.difficulty) {
-			const difficultyFaces = parseInt(options.difficulty.split("d")[1])
-			difficultyResult = Math.floor(Math.random() * difficultyFaces + 1)
+			difficultyResult = roll(options.difficulty)
 		}
 
 		if (fatigue) {
-			fatigueResults = Array.from({ length: fatigue }, () =>
-				Math.floor(Math.random() * 6 + 1),
-			)
+			fatigueResults = Array.from({ length: fatigue }, () => roll(6))
 		}
 
 		const fatigueDamage =

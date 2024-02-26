@@ -15,6 +15,29 @@ export function* filter<T>(
 	}
 }
 
+export function* excludeWhere<T>(
+	iterable: Iterable<T>,
+	predicate: (value: T) => true | Falsy,
+) {
+	for (const value of iterable) {
+		if (!predicate(value)) yield value
+	}
+}
+
+export function* exclude<T>(exclusions: Iterable<T>, iterable: Iterable<T>) {
+	const set = new Set(exclusions)
+	yield* excludeWhere(iterable, (value) => set.has(value))
+}
+
+export function* take<T>(count: number, iterable: Iterable<T>) {
+	let index = 0
+	for (const value of iterable) {
+		index += 1
+		if (index > count) break
+		yield value
+	}
+}
+
 type RangeArgs = [length: number] | [start: number, end: number]
 
 export function* range(...args: RangeArgs) {

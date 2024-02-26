@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm"
 import { kebabCase } from "lodash-es"
 import { db } from "../db.ts"
 import { expect } from "../helpers/expect.ts"
-import { charactersTable, playersTable } from "../schema.ts"
+import { attributesTable, charactersTable, playersTable } from "../schema.ts"
 import { StrictOmit } from "../types.ts"
 
 export type CharacterData = Awaited<ReturnType<typeof createCharacter>>
@@ -21,10 +21,13 @@ export async function createCharacter({
 		}),
 	)
 
-	const baseAttributeDice = await getBaseAttributeDice({
-		aspectAttributeId: aspect.attribute.id,
-		secondaryAttributeId: insertData.secondaryAttributeId,
-	})
+	const baseAttributeDice = getAttributeDice(
+		{
+			aspect,
+			secondaryAttributeId: insertData.secondaryAttributeId,
+		},
+		await db.query.attributesTable.findMany(),
+	)
 	const maxHealth = getMaxHealth(baseAttributeDice)
 
 	const character = db
@@ -94,13 +97,11 @@ export async function getCharacter(
 
 	if (!character) return
 
-	const baseAttributeDice = await getBaseAttributeDice({
-		aspectAttributeId: character.aspect.attribute.id,
-		secondaryAttributeId: character.secondaryAttributeId,
-	})
-
+	const baseAttributeDice = getAttributeDice(
+		character,
+		await db.query.attributesTable.findMany(),
+	)
 	const maxHealth = getMaxHealth(baseAttributeDice)
-
 	return { ...character, baseAttributeDice, maxHealth }
 }
 
@@ -138,20 +139,19 @@ export async function setPlayerCharacter(
 	return expect(player)
 }
 
-async function getBaseAttributeDice({
-	aspectAttributeId,
-	secondaryAttributeId,
-}: {
-	aspectAttributeId: string
-	secondaryAttributeId: string
-}) {
-	const attributes = await db.query.attributesTable.findMany()
+export function getAttributeDice(
+	character: {
+		aspect: { attributeId: string }
+		secondaryAttributeId: string
+	},
+	attributes: (typeof attributesTable.$inferSelect)[],
+) {
 	return new Map(
 		attributes.map((attribute) => {
 			let die = 4
-			if (aspectAttributeId === attribute.id) {
+			if (character.aspect.attributeId === attribute.id) {
 				die = 8
-			} else if (secondaryAttributeId === attribute.id) {
+			} else if (character.secondaryAttributeId === attribute.id) {
 				die = 6
 			}
 			return [attribute.id, { attribute, die }]
@@ -159,8 +159,8 @@ async function getBaseAttributeDice({
 	)
 }
 
-function getMaxHealth(
-	baseAttributeDice: Awaited<ReturnType<typeof getBaseAttributeDice>>,
+export function getMaxHealth(
+	baseAttributeDice: Awaited<ReturnType<typeof getAttributeDice>>,
 ) {
 	return expect(baseAttributeDice.get("strength")).die * 2
 }
