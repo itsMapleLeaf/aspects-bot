@@ -1,7 +1,7 @@
 import * as Discord from "discord.js"
 import { Client } from "discord.js"
 import { inspect } from "node:util"
-import { firstWhereReturning } from "../helpers/iterable.ts"
+import { excludeWhere, firstWhereReturning, map } from "../helpers/iterable.ts"
 import { Logger } from "../logger.ts"
 import { MaybeArray } from "../types.ts"
 import { CommandError } from "./commands/CommandError.ts"
