@@ -6,20 +6,21 @@ import { join, map, range } from "../helpers/iterable.ts"
 import { charactersTable } from "../schema.ts"
 import { roll } from "./roll.ts"
 
+const attributeDice = [4, 6, 8, 12, 20] as const
+
+const diceChoices = attributeDice.map((value) => ({
+	name: `d${value}`,
+	value,
+}))
+
+const modifyChoices = [
+	{ name: "eased", value: "eased" },
+	{ name: "daunting", value: "daunting" },
+] as const
+
 export function useRollCommands() {
-	const attributeDice = [4, 6, 8, 12, 20] as const
-
-	const diceChoices = attributeDice.map((value) => ({
-		name: `d${value}`,
-		value,
-	}))
-
-	const modifyChoices = [
-		{ name: "eased", value: "eased" },
-		{ name: "daunting", value: "daunting" },
-	] as const
-
-	useSlashCommand("roll", {
+	useSlashCommand({
+		name: "roll",
 		description: "Make a simple dice roll",
 
 		options: (t) => ({
@@ -50,7 +51,8 @@ export function useRollCommands() {
 		},
 	})
 
-	useSlashCommand("action", {
+	useSlashCommand({
+		name: "action",
 		description: "Make an action roll",
 
 		options: (t) => ({

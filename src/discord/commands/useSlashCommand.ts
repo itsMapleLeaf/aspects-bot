@@ -1,44 +1,60 @@
 import * as Discord from "discord.js"
-import { Simplify } from "../../types.ts"
-import { SlashCommandContext } from "./SlashCommandContext.ts"
+import { Override, Simplify, StrictOmit } from "../../types.ts"
+import { SlashCommand, SlashCommandContext } from "./SlashCommandContext.ts"
 
-type UseSlashCommandArgs<Options extends Record<string, Option>> = {
-	description: string
-	options: (t: typeof optionTypes) => Options
-	run: (args: {
-		interaction: Discord.ChatInputCommandInteraction
-		options: OptionValues<Options>
-	}) => Promise<void>
-}
-
-export function useSlashCommand<Options extends Record<string, Option>>(
-	name: string,
-	args: UseSlashCommandArgs<Options>,
+export function useSlashCommand<Options extends OptionRecord>(
+	args: SlashCommandArgs<Options>,
 ) {
 	const store = SlashCommandContext.use()
-	const options = args.options(optionTypes)
-	store.commands.set(name, {
-		data: (name) => ({
-			name,
-			description: args.description,
-			options: Object.entries(options).map(([name, option]) =>
+	return store.addCommand(defineSlashCommand<Options>(args, store))
+}
+
+export type SlashCommandArgs<Options extends OptionRecord> = Override<
+	StrictOmit<Discord.ChatInputApplicationCommandData, "type">,
+	{
+		group?: string
+		options?: (t: typeof optionTypes) => Options
+		run: (args: {
+			interaction: Discord.ChatInputCommandInteraction
+			options: OptionValues<Options>
+		}) => Promise<void>
+	}
+>
+
+export function defineSlashCommand<Options extends OptionRecord>(
+	args: SlashCommandArgs<Options>,
+	context: typeof SlashCommandContext.$type,
+): SlashCommand {
+	const options = args.options?.(optionTypes)
+
+	for (const [name, option] of Object.entries(options ?? {})) {
+		if (option.autocomplete) {
+			context.addAutocompletion(args.name, name, {
+				autocomplete: option.autocomplete,
+			})
+		}
+	}
+
+	return {
+		data: {
+			...args,
+			options: Object.entries(options ?? {}).map(([name, option]) =>
 				option.data(name),
 			),
-		}),
-		async run({ interaction, ...commandArgs }) {
+		},
+		async run(interaction) {
 			if (interaction.isChatInputCommand()) {
 				const values: Record<string, unknown> = {}
-				for (const [name, option] of Object.entries(options)) {
+				for (const [name, option] of Object.entries(options ?? {})) {
 					values[name] = option.parse(interaction, name)
 				}
 				await args.run({
-					...commandArgs,
 					interaction,
 					options: values as OptionValues<Options>,
 				})
 			}
 		},
-	})
+	}
 }
 
 type Option = {
@@ -50,23 +66,19 @@ type Option = {
 	autocomplete?: AutocompleteFn
 }
 
+export type OptionRecord = Record<string, Option>
+
 type OptionValues<Options extends Record<string, Option>> = Simplify<{
 	[K in keyof Options]: ReturnType<Options[K]["parse"]>
 }>
 
 type AutocompleteFn<T extends string | number = string | number> = (
 	input: string,
-) => Promise<readonly Discord.ApplicationCommandOptionChoiceData<T>[]>
+) => Promise<Discord.ApplicationCommandOptionChoiceData<T>[]>
 
 type RequiredType<Condition, T> = Condition extends true
 	? NonNullable<T>
 	: T | null
-
-type Override<A, B> = Simplify<UnionOmit<A, keyof B> & B>
-
-type UnionOmit<T, K extends PropertyKey> = T extends unknown
-	? Omit<T, K>
-	: never
 
 const optionTypes = {
 	string<const Required extends boolean, const Value extends string>(

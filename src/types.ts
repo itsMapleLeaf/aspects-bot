@@ -19,3 +19,7 @@ export type Falsy = false | 0 | 0n | "" | null | undefined
 export type Truthy<T> = Exclude<T, Falsy>
 
 export type Simplify<T> = { [K in keyof T]: T[K] } & {}
+
+export type Override<A extends object, B extends object> = Simplify<
+	Omit<A, keyof B> & B
+>

@@ -1,15 +1,12 @@
-import { dedent } from "ts-dedent"
 import * as Discord from "discord.js"
-import { ButtonStyle } from "discord.js"
-import { db } from "../db.ts"
-import { InteractionHandler } from "../discord/interactions/InteractionHandler.ts"
-import { ButtonMatcher } from "../discord/messageComponents/ButtonMatcher.ts"
-import { StringSelectMatcher } from "../discord/messageComponents/StringSelectMatcher.ts"
-import { buttonRow } from "../discord/messageComponents/buttonRow.ts"
+import { dedent } from "ts-dedent"
 import { getAttributeDice, getMaxHealth } from "../characters/CharacterData.ts"
+import { db } from "../db.ts"
+import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
+import { buttonRow, useButton } from "../discord/messageComponents/useButton.ts"
 import { raise } from "../helpers/errors.ts"
-import { joinTruthy } from "../helpers/string.ts"
 import { expectSoft } from "../helpers/expect.ts"
+import { joinTruthy } from "../helpers/string.ts"
 import {
 	CombatState,
 	advanceCombat,
@@ -17,15 +14,71 @@ import {
 	getCombatState,
 	rewindCombat,
 } from "./CombatState.ts"
-import { CommandError } from "../discord/commands/CommandError.ts"
 
-const advanceButton = new ButtonMatcher("combatTracker:advance")
-const rewindButton = new ButtonMatcher("combatTracker:rewind")
-const endCombatButton = new ButtonMatcher("combatTracker:endCombat")
-const dismissButton = new ButtonMatcher("combatSetup:dismiss")
+export function useCombatTracker() {
+	const advanceButton = useButton({
+		customId: "combatTracker:advance",
+		async onClick(interaction) {
+			const guild =
+				interaction.guild ??
+				raise(
+					new InteractionResponse(
+						"Sorry, this command can only be used in a server.",
+					),
+				)
 
-class CombatTracker implements InteractionHandler {
-	async render(
+			const state =
+				(await getCombatState(guild)) ??
+				raise(new InteractionResponse("Combat isn't running!"))
+
+			await interaction.update(await render(await advanceCombat(state)))
+		},
+	})
+
+	const rewindButton = useButton({
+		customId: "combatTracker:rewind",
+		async onClick(interaction) {
+			const guild =
+				interaction.guild ??
+				raise(
+					new InteractionResponse(
+						"Sorry, this command can only be used in a server.",
+					),
+				)
+
+			const state =
+				(await getCombatState(guild)) ??
+				raise(new InteractionResponse("Combat isn't running!"))
+
+			await interaction.update(await render(await rewindCombat(state)))
+		},
+	})
+
+	const endCombatButton = useButton({
+		customId: "combatTracker:endCombat",
+		async onClick(interaction) {
+			const guild =
+				interaction.guild ??
+				raise(
+					new InteractionResponse(
+						"Sorry, this command can only be used in a server.",
+					),
+				)
+
+			await endCombat(guild)
+
+			const response = await interaction.update({
+				content: "Combat has ended.",
+				components: [],
+				embeds: [],
+			})
+
+			await sleep(5000)
+			await response.delete()
+		},
+	})
+
+	async function render(
 		state: CombatState | undefined,
 	): Promise<Discord.BaseMessageOptions> {
 		if (!state) {
@@ -109,63 +162,26 @@ class CombatTracker implements InteractionHandler {
 					rewindButton.render({
 						label: "Rewind",
 						emoji: "⏪",
-						style: ButtonStyle.Secondary,
+						style: Discord.ButtonStyle.Secondary,
 					}),
 					advanceButton.render({
 						label: "Advance",
 						emoji: "⏩",
-						style: ButtonStyle.Primary,
+						style: Discord.ButtonStyle.Primary,
 					}),
 					endCombatButton.render({
 						label: "End Combat",
 						emoji: "⏹️",
-						style: ButtonStyle.Danger,
+						style: Discord.ButtonStyle.Danger,
 					}),
 				]),
 			],
 		}
 	}
 
-	async handleInteraction(interaction: Discord.Interaction) {
-		if (!interaction.inGuild()) return
-
-		if (advanceButton.matches(interaction)) {
-			const state =
-				(await getCombatState({ id: interaction.guildId })) ??
-				raise(new CommandError("Combat isn't running!"))
-
-			await interaction.update(await this.render(await advanceCombat(state)))
-		}
-
-		if (rewindButton.matches(interaction)) {
-			const state =
-				(await getCombatState({ id: interaction.guildId })) ??
-				raise(new CommandError("Combat isn't running!"))
-
-			await interaction.update(await this.render(await rewindCombat(state)))
-		}
-
-		if (endCombatButton.matches(interaction)) {
-			await endCombat({ id: interaction.guildId })
-			await interaction.update({
-				content: "Combat has ended.",
-				embeds: [],
-				components: [
-					buttonRow([
-						dismissButton.render({
-							label: "Dismiss",
-							style: ButtonStyle.Secondary,
-						}),
-					]),
-				],
-			})
-		}
-
-		if (dismissButton.matches(interaction)) {
-			await interaction.deferUpdate()
-			await interaction.deleteReply()
-		}
-	}
+	return { render }
 }
 
-export const combatTracker = new CombatTracker()
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms))
+}

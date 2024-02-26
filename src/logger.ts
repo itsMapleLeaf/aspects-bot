@@ -97,7 +97,7 @@ export const Logger = {
 					f.highlight(callOptionalFunction(prefix, f)),
 					" failed in ",
 					f.highlight(duration),
-					".",
+					". ",
 					inspect(error, { depth: 10 }),
 				].join(""),
 			)

@@ -2,9 +2,8 @@ import { Interaction, PermissionFlagsBits } from "discord.js"
 import { eq, ne, sql } from "drizzle-orm"
 import { startCase } from "lodash-es"
 import { db } from "../db.ts"
-import { CommandError } from "../discord/commands/CommandError.ts"
-import { optionTypes as t } from "../discord/slash-command-option.ts"
-import { defineSlashCommand } from "../discord/slash-command.ts"
+import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
+import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
 import {
 	listAspectSkills,
 	listAspects,
@@ -14,8 +13,14 @@ import {
 } from "../game-data.ts"
 import { raise } from "../helpers/errors.ts"
 import { expect } from "../helpers/expect.ts"
+import { exclude } from "../helpers/iterable.ts"
 import { randomItem } from "../helpers/random.ts"
-import { aspectsTable, attributesTable, racesTable } from "../schema.ts"
+import {
+	aspectsTable,
+	attributesTable,
+	charactersTable,
+	racesTable,
+} from "../schema.ts"
 import {
 	createCharacter,
 	getCharacter,
@@ -24,7 +29,6 @@ import {
 } from "./CharacterData.ts"
 import { createCharacterMessage } from "./characterMessage.ts"
 import { characterNames } from "./characterNames.ts"
-import { characterOption } from "./characterOption.ts"
 
 const raceChoices = (await listRaces()).map((race) => ({
 	name: race.name,
@@ -49,14 +53,12 @@ const attributeChoices = [...(await listAttributes())].map((attribute) => ({
 	value: attribute.id,
 }))
 
-export const characterCommands = [
-	defineSlashCommand({
+export function useCharacterCommands() {
+	useSlashCommand({
 		name: "create",
 		description: "Create a character. Leave values blank to generate them.",
-		data: {
-			defaultMemberPermissions: [PermissionFlagsBits.ManageGuild],
-		},
-		options: {
+		defaultMemberPermissions: [PermissionFlagsBits.ManageGuild],
+		options: (t) => ({
 			name: t.string("The character's name"),
 			player: t.user("The player of the character"),
 			race: t.string("The character's race", { choices: raceChoices }),
@@ -68,8 +70,20 @@ export const characterCommands = [
 			notes: t.integer(
 				"The amount of notes (currency) the character starts with",
 			),
-		},
-		run: async (interaction, options) => {
+		}),
+		run: async ({ interaction, options }) => {
+			const existing =
+				options.name &&
+				(await db.query.charactersTable.findFirst({
+					where: (fields, ops) => ops.eq(fields.name, options.name as string),
+				}))
+
+			if (existing) {
+				throw new InteractionResponse(
+					`Oops, I already found a character named "${options.name}". Try again with a different name.`,
+				)
+			}
+
 			let aspectId = options.aspect
 			let aspect: { id: string; attributeId: string } | undefined
 			if (!aspectId) {
@@ -120,8 +134,24 @@ export const characterCommands = [
 				secondaryAttributeId = expect(secondaryAttribute).id
 			}
 
+			const existingCharacters = await db.query.charactersTable.findMany()
+
+			const availableCharacterNames = exclude(
+				existingCharacters.map((c) => c.name),
+			).from(characterNames)
+
+			const name = options.name ?? randomItem(availableCharacterNames)
+			if (!name) {
+				throw new InteractionResponse(
+					[
+						`Oh sheesh, it looks like I ran out of names.`,
+						`You'll have to pass one manually. Sorry!`,
+					].join("\n"),
+				)
+			}
+
 			const character = await createCharacter({
-				name: options.name ?? randomItem(characterNames),
+				name: name,
 				playerDiscordId: options.player?.id ?? null,
 				aspectId,
 				raceId,
@@ -135,17 +165,18 @@ export const characterCommands = [
 				ephemeral: true,
 			})
 		},
-	}),
+	})
 
-	defineSlashCommand({
+	useSlashCommand({
 		name: "show",
-		aliases: ["view", "info"],
 		description: "Show character details",
-		options: {
-			character: characterOption("The character to show. Omit to use your own"),
+		options: (t) => ({
+			character: t.string("The character to show. Omit to use your own", {
+				autocomplete: autocompleteCharacter,
+			}),
 			public: t.boolean("Show the character to everyone. Private by default."),
-		},
-		run: async (interaction, options) => {
+		}),
+		run: async ({ interaction, options }) => {
 			const character = await getInteractionCharacter(
 				options.character,
 				interaction,
@@ -156,21 +187,20 @@ export const characterCommands = [
 				allowedMentions: { users: [], roles: [] },
 			})
 		},
-	}),
+	})
 
-	defineSlashCommand({
-		name: "set",
-		aliases: ["update"],
+	useSlashCommand({
+		name: "update",
 		description: "Set a character's attribute, skill, or aspect",
-		options: {
-			character: characterOption(
-				"The character to update. Omit to use your own",
-			),
+		options: (t) => ({
+			character: t.string("The character to update. Omit to use your own", {
+				autocomplete: autocompleteCharacter,
+			}),
 			health: t.integer("The character's health"),
 			fatigue: t.integer("The character's fatigue"),
 			notes: t.integer("The character's notes (currency) amount"),
-		},
-		run: async (interaction, options) => {
+		}),
+		run: async ({ interaction, options }) => {
 			const character = await getInteractionCharacter(
 				options.character,
 				interaction,
@@ -214,25 +244,28 @@ export const characterCommands = [
 				ephemeral: isServerAdmin,
 			})
 		},
-	}),
+	})
 
-	defineSlashCommand({
+	useSlashCommand({
 		name: "assign",
 		description: "Assign a character to a player",
-		options: {
-			character: t.required(characterOption()),
-			player: t.required(t.user("The player to assign the character to")),
-		},
-		data: {
-			defaultMemberPermissions: [PermissionFlagsBits.ManageGuild],
-		},
-		run: async (interaction, options) => {
+		options: (t) => ({
+			character: t.string("The character to assign", {
+				required: true,
+				autocomplete: autocompleteCharacter,
+			}),
+			player: t.user("The player to assign the character to", {
+				required: true,
+			}),
+		}),
+		defaultMemberPermissions: [PermissionFlagsBits.ManageGuild],
+		run: async ({ interaction, options }) => {
 			const character = await getCharacter({
 				characterId: options.character,
 			})
 
 			if (!character) {
-				throw new CommandError("Sorry, I couldn't find that character.")
+				throw new InteractionResponse("Sorry, I couldn't find that character.")
 			}
 
 			await setPlayerCharacter(options.player.id, character.id)
@@ -242,8 +275,8 @@ export const characterCommands = [
 				allowedMentions: { users: [], roles: [] },
 			})
 		},
-	}),
-]
+	})
+}
 
 async function getInteractionCharacter(
 	characterId: string | null,
@@ -253,7 +286,7 @@ async function getInteractionCharacter(
 		const character = await getCharacter({ characterId })
 		return (
 			character ??
-			raise(new CommandError("Sorry, I couldn't find that character."))
+			raise(new InteractionResponse("Sorry, I couldn't find that character."))
 		)
 	}
 
@@ -261,6 +294,21 @@ async function getInteractionCharacter(
 		discordUser: interaction.user,
 	})
 	return (
-		character ?? raise(new CommandError("You don't have a character assigned."))
+		character ??
+		raise(new InteractionResponse("You don't have a character assigned."))
 	)
+}
+
+async function autocompleteCharacter(input: string) {
+	const results = await db.query.charactersTable.findMany({
+		...(input && {
+			where: (cols, ops) => ops.like(cols.name, `%${input}%`),
+		}),
+		orderBy: [charactersTable.name],
+	})
+
+	return results.map((c) => ({
+		name: c.name,
+		value: c.id,
+	}))
 }

@@ -24,9 +24,13 @@ export function* excludeWhere<T>(
 	}
 }
 
-export function* exclude<T>(exclusions: Iterable<T>, iterable: Iterable<T>) {
+export function exclude<T>(exclusions: Iterable<T>) {
 	const set = new Set(exclusions)
-	yield* excludeWhere(iterable, (value) => set.has(value))
+	return {
+		*from(iterable: Iterable<T>) {
+			yield* excludeWhere(iterable, (value) => set.has(value))
+		},
+	}
 }
 
 export function* take<T>(count: number, iterable: Iterable<T>) {

@@ -1,6 +1,7 @@
 const empty = Symbol()
 
 export class Context<InitArgs extends unknown[], Value> {
+	$type!: Value
 	#value: Value | typeof empty = empty
 	#init
 
