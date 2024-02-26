@@ -69,7 +69,7 @@ class CombatTracker implements InteractionHandler {
 
 			const initiative = joinTruthy(" ⇒ ", [
 				attributeDie && `d${attributeDie.die}`,
-				participant.initiative,
+				Discord.bold(String(participant.initiative)),
 			])
 
 			const maxHealth = getMaxHealth(attributeDice)
