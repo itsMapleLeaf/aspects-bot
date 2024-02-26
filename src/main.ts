@@ -7,6 +7,7 @@ import { useRollCommands } from "./dice/useRollCommands.ts"
 import { useCommands } from "./discord/command-handler.ts"
 import { SlashCommandContext } from "./discord/commands/SlashCommandContext.ts"
 import { useInteractionHandlers } from "./discord/interactions/InteractionHandler.ts"
+import { MessageComponentContext } from "./discord/messageComponents/MessageComponentContext.ts"
 import { env } from "./env.ts"
 import { Logger } from "./logger.ts"
 
@@ -21,9 +22,11 @@ client.on("ready", (client) => {
 	Logger.info((f) => `Logged in as ${f.highlight(client.user?.tag)}`)
 })
 
-SlashCommandContext.provide(client, () => {
+{
+	using _slashCommands = SlashCommandContext.provide(client)
+	using _messageComponents = MessageComponentContext.provide(client)
 	useRollCommands()
-})
+}
 
 useCommands(client, [...characterCommands, ...combatCommands])
 useInteractionHandlers(client, [combatSetup, combatTracker])
