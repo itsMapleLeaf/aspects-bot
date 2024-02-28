@@ -1,27 +1,14 @@
 import * as Notion from "@notionhq/client"
-import { eq } from "drizzle-orm"
+import { QueryDatabaseResponse } from "@notionhq/client/build/src/api-endpoints.js"
 import { kebabCase } from "lodash-es"
 import { db } from "./db.ts"
 import { env } from "./env.ts"
-import { raise } from "./helpers/errors.ts"
+import { first, map } from "./helpers/iterable.ts"
 import { Logger } from "./logger.ts"
-import * as schema from "./schema.ts"
 
 const notion = new Notion.Client({
 	auth: env.NOTION_API_KEY,
 })
-
-function getPropertyText(property: any) {
-	if (property.type === "title") {
-		return property.title.map((block: any) => block.plain_text ?? "").join("")
-	} else if (property.type === "rich_text") {
-		return property.rich_text
-			.map((block: any) => block.plain_text ?? "")
-			.join("")
-	} else {
-		throw new Error(`Unsupported property type: ${property.type}`)
-	}
-}
 
 export async function loadGameData() {
 	const [
@@ -54,209 +41,245 @@ export async function loadGameData() {
 		}),
 	])
 
-	for (const result of racesResponse.results) {
-		const name = getPropertyText((result as any).properties.Name)
+	await db.$transaction(async (db) => {
+		for (const result of DocumentAccessor.responseItems(racesResponse)) {
+			const name = result.getPropertyText("Name")
 
-		const abilities = getPropertyText((result as any).properties.Abilities)
-			.split("\n")
-			.map((line: string) => line.split(/\s-\s/g))
-			.map(([name, description]: [string, string]) => ({ name, description }))
-
-		await db
-			.insert(schema.racesTable)
-			.values({
-				id: kebabCase(name),
-				name,
-				emoji: (result as any).icon?.emoji,
-			})
-			.onConflictDoUpdate({
-				target: [schema.racesTable.id],
-				set: { emoji: (result as any).icon?.emoji },
+			await db.race.upsert({
+				where: { id: kebabCase(name) },
+				create: {
+					id: kebabCase(name),
+					name,
+					emoji: result.getEmoji(),
+				},
+				update: {
+					emoji: result.getEmoji(),
+				},
 			})
 
-		for (const ability of abilities) {
-			await db
-				.insert(schema.raceAbilitiesTable)
-				.values({
-					id: kebabCase(ability.name),
-					name: ability.name,
-					description: ability.description,
-					raceId: kebabCase(name),
+			const abilities = result
+				.getPropertyText("Abilities")
+				.split("\n")
+				.map((line) => line.split(/\s-\s/g))
+				.map(([name = "", description = ""]) => ({ name, description }))
+
+			for (const ability of abilities) {
+				await db.raceAbility.upsert({
+					where: { id: kebabCase(ability.name) },
+					create: {
+						id: kebabCase(ability.name),
+						name: ability.name,
+						description: ability.description,
+						raceId: kebabCase(name),
+					},
+					update: {
+						description: ability.description,
+						raceId: kebabCase(name),
+					},
 				})
-				.onConflictDoNothing()
+			}
 		}
-	}
 
-	for (const result of aspectsResponse.results) {
-		const name = getPropertyText((result as any).properties.Name)
-		const description = getPropertyText((result as any).properties.Description)
-		const attributeId = (result as any).properties.Attribute.relation[0].id
-		const attributeDoc = attributesResponse.results.find(
-			(result) => result.id === attributeId,
-		)
-		const attributeName = getPropertyText((attributeDoc as any).properties.Name)
+		for (const result of DocumentAccessor.responseItems(attributesResponse)) {
+			const name = result.getPropertyText("Name")
+			const description = result.getPropertyText("Description")
 
-		await db
-			.insert(schema.aspectsTable)
-			.values({
-				id: kebabCase(name),
-				name,
-				description,
-				emoji: (result as any).icon?.emoji,
-				attributeId: kebabCase(attributeName),
-			})
-			.onConflictDoUpdate({
-				target: [schema.aspectsTable.id],
-				set: {
+			const aspectDoc = first(
+				result.getRelatedDocuments("Aspect", aspectsResponse.results),
+			)
+
+			if (!aspectDoc) {
+				Logger.error(
+					`Attribute "${name}" is missing a related aspect. ${result.json}`,
+				)
+				continue
+			}
+
+			await db.attribute.upsert({
+				where: { id: kebabCase(name) },
+				create: {
+					id: kebabCase(name),
+					name,
 					description,
-					emoji: (result as any).icon?.emoji,
+					emoji: result.getEmoji(),
+					aspectId: kebabCase(aspectDoc.getPropertyText("Name")),
+					aspectName: aspectDoc.getPropertyText("Name"),
+					aspectDescription: aspectDoc.getPropertyText("Description"),
+					aspectEmoji: aspectDoc.getEmoji(),
+				},
+				update: {
+					description,
+					emoji: result.getEmoji(),
+					aspectName: aspectDoc.getPropertyText("Name"),
+					aspectDescription: aspectDoc.getPropertyText("Description"),
+					aspectEmoji: aspectDoc.getEmoji(),
+				},
+			})
+		}
+
+		for (const result of DocumentAccessor.responseItems(
+			generalSkillsResponse,
+		)) {
+			const name = result.getPropertyText("Name")
+			const description = result.getPropertyText("Description")
+			const difficulty = result.getPropertyText("Difficulty")
+
+			const attributeName = first(
+				result.getRelatedDocuments("Attribute", attributesResponse.results),
+			)?.getPropertyText("Name")
+
+			await db.generalSkill.upsert({
+				where: { id: kebabCase(name) },
+				create: {
+					id: kebabCase(name),
+					name,
+					description,
+					difficulty,
 					attributeId: kebabCase(attributeName),
 				},
-			})
-	}
-
-	for (const result of attributesResponse.results) {
-		const name = getPropertyText((result as any).properties.Name)
-		const description = getPropertyText((result as any).properties.Description)
-		const aspectId = (result as any).properties.Aspect.relation[0].id
-		const aspectDoc = aspectsResponse.results.find(
-			(result) => result.id === aspectId,
-		)
-		const aspectName = getPropertyText((aspectDoc as any).properties.Name)
-
-		await db
-			.insert(schema.attributesTable)
-			.values({
-				id: kebabCase(name),
-				name,
-				description,
-				emoji: (result as any).icon?.emoji,
-				aspectId: kebabCase(aspectName),
-			})
-			.onConflictDoUpdate({
-				target: [schema.attributesTable.id],
-				set: {
-					description,
-					emoji: (result as any).icon?.emoji,
-					aspectId: kebabCase(aspectName),
-				},
-			})
-	}
-
-	for (const result of generalSkillsResponse.results) {
-		const name = getPropertyText((result as any).properties.Name)
-		const description = getPropertyText((result as any).properties.Description)
-		const difficulty = getPropertyText((result as any).properties.Difficulty)
-		const attributeId = (result as any).properties.Attribute.relation[0].id
-		const attributeDoc = attributesResponse.results.find(
-			(result) => result.id === attributeId,
-		)
-		const attributeName = getPropertyText((attributeDoc as any).properties.Name)
-
-		await db
-			.insert(schema.generalSkillsTable)
-			.values({
-				id: kebabCase(name),
-				name,
-				description,
-				difficulty,
-				attributeId: kebabCase(attributeName),
-			})
-			.onConflictDoUpdate({
-				target: [schema.generalSkillsTable.id],
-				set: {
+				update: {
 					description,
 					difficulty,
 					attributeId: kebabCase(attributeName),
 				},
 			})
+		}
+
+		for (const result of DocumentAccessor.responseItems(aspectSkillsResponse)) {
+			const name = result.getPropertyText("Name")
+
+			const aspectIds = map(
+				result.getRelatedDocuments("Aspects", aspectsResponse.results),
+				(doc) => kebabCase(doc.getPropertyText("Name")),
+			)
+
+			await db.aspectSkill.upsert({
+				where: { id: kebabCase(name) },
+				create: {
+					id: kebabCase(name),
+					name,
+					aspectAttributes: {
+						connect: [...map(aspectIds, (id) => ({ id }))],
+					},
+				},
+				update: {
+					aspectAttributes: {
+						connect: [...map(aspectIds, (id) => ({ id }))],
+					},
+				},
+			})
+		}
+	})
+}
+
+class DocumentAccessor {
+	constructor(
+		private readonly data: QueryDatabaseResponse["results"][number],
+	) {}
+
+	static *responseItems(data: QueryDatabaseResponse) {
+		for (const result of data.results) {
+			yield new DocumentAccessor(result)
+		}
 	}
 
-	for (const result of aspectSkillsResponse.results) {
-		const name = getPropertyText((result as any).properties.Name)
+	get id() {
+		return this.data.id
+	}
 
-		const aspectIds = (result as any).properties.Aspects.relation.map(
-			(relation: any) => {
-				const aspectDoc = aspectsResponse.results.find(
-					(result) => result.id === relation.id,
-				)
-				return getPropertyText((aspectDoc as any).properties.Name)
-			},
+	get json() {
+		return JSON.stringify(this.data, null, 2)
+	}
+
+	getProperty(name: string) {
+		const property = "properties" in this.data && this.data.properties[name]
+		if (!property) {
+			Logger.warn(`Property "${name}" not found in document: ${this.json}`)
+			return undefined
+		}
+		return property
+	}
+
+	getPropertyText(propertyName: string) {
+		const property = this.getProperty(propertyName)
+		if (!property) return ""
+
+		const richTextItems =
+			property &&
+			(("rich_text" in property && property.rich_text) ||
+				("title" in property && property.title))
+
+		const text =
+			Array.isArray(richTextItems) &&
+			richTextItems.map((block) => block.plain_text)?.join("")
+
+		if (typeof text !== "string") {
+			const info = {
+				propertyName,
+				property,
+				document: this.json,
+			}
+			Logger.warn(`Failed to parse text. ${JSON.stringify(info, null, 2)}`)
+			return ""
+		}
+
+		return text
+	}
+
+	getEmoji() {
+		const icon = "icon" in this.data && this.data.icon
+		const emoji = icon && icon.type === "emoji" && icon.emoji
+		if (!emoji) {
+			const info = {
+				icon,
+				document: this.json,
+			}
+			Logger.warn(`Failed to parse emoji. ${JSON.stringify(info, null, 2)}`)
+			return
+		}
+		return emoji
+	}
+
+	*getRelatedDocuments(
+		propertyName: string,
+		documents: QueryDatabaseResponse["results"],
+	) {
+		const property = this.getProperty(propertyName)
+
+		const relationIds =
+			property && "relation" in property && Array.isArray(property.relation)
+				? property.relation.map((relation) => relation.id)
+				: undefined
+
+		if (!relationIds) {
+			const info = {
+				propertyName,
+				property,
+				document: this.json,
+			}
+			Logger.warn(`Failed to parse relations. ${JSON.stringify(info, null, 2)}`)
+			return
+		}
+
+		const documentsById = new Map(
+			documents.map((result) => [result.id, result] as const),
 		)
 
-		await db
-			.insert(schema.aspectSkillsTable)
-			.values({
-				id: kebabCase(name),
-				name,
-			})
-			.onConflictDoNothing()
-
-		for (const aspectId of aspectIds) {
-			await db
-				.insert(schema.aspectSkillsToAspectsTable)
-				.values({
-					aspectSkillId: kebabCase(name),
-					aspectId: kebabCase(aspectId),
-				})
-				.onConflictDoNothing()
+		for (const relationId of relationIds) {
+			const relatedDoc = documentsById.get(relationId)
+			if (relatedDoc) {
+				yield new DocumentAccessor(relatedDoc)
+				continue
+			}
+			const info = {
+				propertyName,
+				relationId,
+				documents: documents.map((doc) => doc.id),
+				document: this.json,
+			}
+			Logger.warn(
+				`Failed to find related document. ${JSON.stringify(info, null, 2)}`,
+			)
 		}
 	}
 }
-
-export async function listRaces() {
-	return await db.query.racesTable.findMany()
-}
-
-export async function getRace(id: string) {
-	const race = await db.query.racesTable.findFirst({
-		where: eq(schema.racesTable.id, id),
-	})
-	return race ?? raise(`Race not found: ${id}`)
-}
-
-export async function listAspects() {
-	return await db.query.aspectsTable.findMany()
-}
-
-export async function getAspect(id: string) {
-	const aspect = await db.query.aspectsTable.findFirst({
-		where: eq(schema.aspectsTable.id, id),
-	})
-	return aspect ?? raise(`Aspect not found: ${id}`)
-}
-
-export async function listAttributes() {
-	return await db.query.attributesTable.findMany()
-}
-
-export async function getAttribute(id: string) {
-	const attribute = await db.query.attributesTable.findFirst({
-		where: eq(schema.attributesTable.id, id),
-	})
-	return attribute ?? raise(`Attribute not found: ${id}`)
-}
-
-export async function listGeneralSkills() {
-	return await db.query.generalSkillsTable.findMany()
-}
-
-export async function getGeneralSkill(id: string) {
-	const generalSkill = await db.query.generalSkillsTable.findFirst({
-		where: eq(schema.generalSkillsTable.id, id),
-	})
-	return generalSkill ?? raise(`General skill not found: ${id}`)
-}
-
-export async function listAspectSkills() {
-	return await db.query.aspectSkillsTable.findMany()
-}
-
-export async function getAspectSkill(id: string) {
-	const aspectSkill = await db.query.aspectSkillsTable.findFirst({
-		where: eq(schema.aspectSkillsTable.id, id),
-	})
-	return aspectSkill ?? raise(`Aspect skill not found: ${id}`)
-}
-
-await Logger.async(`Loading game data`, loadGameData)

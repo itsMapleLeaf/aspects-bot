@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/db.sqlite"
+}
+
+model Character {
+  id                String         @id
+  name              String
+  health            Int
+  fatigue           Int            @default(0)
+  currency          Int            @default(100)
+  player            Player?
+  combatMemberships CombatMember[]
+
+  raceId String
+  race   Race   @relation(fields: [raceId], references: [id], onDelete: NoAction)
+
+  aspectAttributeId String
+  aspectAttribute   Attribute @relation("characterAspectAttribute", fields: [aspectAttributeId], references: [id], onDelete: NoAction)
+
+  secondaryAttributeId String
+  secondaryAttribute   Attribute @relation("characterSecondaryAttribute", fields: [secondaryAttributeId], references: [id], onDelete: NoAction)
+
+  @@map("characters")
+}
+
+model Player {
+  discordUserId String @id
+
+  characterId String?    @unique
+  character   Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+
+  @@map("players")
+}
+
+model Race {
+  id         String        @id
+  name       String
+  emoji      String        @default("")
+  characters Character[]
+  abilities  RaceAbility[]
+
+  @@map("races")
+}
+
+model RaceAbility {
+  id          String @id
+  name        String
+  description String
+
+  raceId String
+  race   Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  @@map("raceAbilities")
+}
+
+model Attribute {
+  id                      String         @id
+  name                    String
+  description             String
+  emoji                   String         @default("")
+  order                   Int            @default(0)
+  charactersWithAspect    Character[]    @relation("characterAspectAttribute")
+  charactersWithSecondary Character[]    @relation("characterSecondaryAttribute")
+  combatStates            CombatState[]  @relation("combatInitiativeAttribute")
+  generalSkills           GeneralSkill[]
+
+  aspectId          String        @unique
+  aspectName        String
+  aspectEmoji       String        @default("")
+  aspectDescription String
+  aspectSkills      AspectSkill[]
+
+  @@map("attributes")
+}
+
+model GeneralSkill {
+  id          String @id
+  name        String
+  description String
+  difficulty  String
+
+  attributeId String
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@map("generalSkills")
+}
+
+model AspectSkill {
+  id               String      @id
+  name             String
+  aspectAttributes Attribute[]
+
+  @@map("aspectSkills")
+}
+
+model CombatState {
+  discordGuildId   String         @id
+  round            Int            @default(1)
+  participantIndex Int            @default(0)
+  members          CombatMember[]
+
+  initiativeAttributeId String
+  initiativeAttribute   Attribute @relation("combatInitiativeAttribute", fields: [initiativeAttributeId], references: [id], onDelete: NoAction)
+
+  @@map("combatStates")
+}
+
+model CombatMember {
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  combatStateGuildId String
+  combatState        CombatState @relation(fields: [combatStateGuildId], references: [discordGuildId], onDelete: Cascade)
+
+  initiative Int
+
+  @@id([characterId, combatStateGuildId])
+  @@map("combatParticipants")
+}

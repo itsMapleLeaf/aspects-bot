@@ -59,16 +59,16 @@ export function useCombatSetup() {
 					"No initiative attribute selected. Using default.",
 				) ?? defaultInitiativeAttributeId
 
-			const characters = await db.query.charactersTable.findMany({
-				where: (fields, ops) => ops.inArray(fields.id, characterIds),
-				with: { aspect: true },
+			const characters = await db.character.findMany({
+				where: { id: { in: characterIds } },
+				include: { aspectAttribute: true },
 			})
 
-			const attributes = await db.query.attributesTable.findMany()
+			const attributes = await db.attribute.findMany()
 
 			const state = await startCombat({
 				guild: { id: interaction.guildId },
-				participants: characters.map((character) => {
+				members: characters.map((character) => {
 					const attributeDice = getAttributeDice(character, attributes)
 
 					const initiativeDie =
@@ -97,13 +97,13 @@ export function useCombatSetup() {
 			initiativeAttributeId?: string | undefined
 		} = {},
 	): Promise<BaseMessageOptions> {
-		const characters = await db.query.charactersTable.findMany({
-			with: {
+		const characters = await db.character.findMany({
+			include: {
 				player: true,
 			},
 		})
 
-		const attributes = await db.query.attributesTable.findMany()
+		const attributes = await db.attribute.findMany()
 
 		const selectedCharacterIds = new Set(
 			args.characterIds ?? characters.filter((c) => c.player).map((c) => c.id),

@@ -8,7 +8,7 @@ import { raise } from "../helpers/errors.ts"
 import { expectSoft } from "../helpers/expect.ts"
 import { joinTruthy } from "../helpers/string.ts"
 import {
-	CombatState,
+	CombatStateData,
 	advanceCombat,
 	endCombat,
 	getCombatState,
@@ -79,7 +79,7 @@ export function useCombatTracker() {
 	})
 
 	async function render(
-		state: CombatState | undefined,
+		state: CombatStateData | undefined,
 	): Promise<Discord.BaseMessageOptions> {
 		if (!state) {
 			return {
@@ -89,9 +89,9 @@ export function useCombatTracker() {
 
 		const currentParticipant =
 			expectSoft(
-				state.participants[state.participantIndex],
+				state.members[state.participantIndex],
 				`No participant at index ${state.participantIndex}. Using the first participant instead.`,
-			) ?? state.participants[0]
+			) ?? state.members[0]
 
 		if (!currentParticipant) {
 			return {
@@ -108,12 +108,12 @@ export function useCombatTracker() {
 			? Discord.userMention(currentParticipant.character.player?.discordUserId)
 			: ""
 
-		const attributes = await db.query.attributesTable.findMany()
+		const attributes = await db.attribute.findMany()
 
-		const descriptionParts = state.participants.map((participant, index) => {
-			const attributeDice = getAttributeDice(participant.character, attributes)
+		const descriptionParts = state.members.map((member, index) => {
+			const attributeDice = getAttributeDice(member.character, attributes)
 
-			let name = participant.character.name
+			let name = member.character.name
 			if (state.participantIndex === index) {
 				name = Discord.bold(name)
 			}
@@ -122,19 +122,19 @@ export function useCombatTracker() {
 
 			const initiative = joinTruthy(" ⇒ ", [
 				attributeDie && `d${attributeDie.die}`,
-				Discord.bold(String(participant.initiative)),
+				Discord.bold(String(member.initiative)),
 			])
 
 			const maxHealth = getMaxHealth(attributeDice)
-			const health = Discord.bold(
-				`${participant.character.health}/${maxHealth}`,
+			const health = Discord.bold(`${member.character.health}/${maxHealth}`)
+
+			const fatigue = Discord.bold(member.character.fatigue.toString())
+			const aspectName = Discord.bold(
+				member.character.aspectAttribute.aspectName,
 			)
 
-			const fatigue = Discord.bold(participant.character.fatigue.toString())
-			const aspectName = Discord.bold(participant.character.aspect.name)
-
 			return dedent`
-				${participant.character.race.emoji} ${name} (${initiative})
+				${member.character.race.emoji} ${name} (${initiative})
 				${health} HP • ${fatigue} FP • ${aspectName}
 			`
 		})

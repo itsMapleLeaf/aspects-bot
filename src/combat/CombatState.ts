@@ -1,55 +1,68 @@
-import { and, eq, notInArray } from "drizzle-orm"
-import { db } from "../db.ts"
-import { expect } from "../helpers/expect.ts"
 import {
-	aspectsTable,
-	attributesTable,
-	charactersTable,
-	combatParticipantsTable,
-	combatStatesTable,
-	playersTable,
-	racesTable,
-} from "../schema.ts"
+	Attribute,
+	Character,
+	CombatMember,
+	CombatState,
+	Player,
+	Race,
+} from "@prisma/client"
+import { db } from "../db.ts"
 
-export type CombatState = typeof combatStatesTable.$inferSelect & {
-	initiativeAttribute: typeof attributesTable.$inferSelect
-	participants: CombatParticipant[]
-	currentParticipant: CombatParticipant | undefined
+export type CombatStateData = CombatState & {
+	initiativeAttribute: Attribute
+	members: CombatMemberData[]
+	currentParticipant: CombatMemberData | undefined
 }
 
-type CombatParticipant = typeof combatParticipantsTable.$inferSelect & {
-	character: typeof charactersTable.$inferSelect & {
-		player: typeof playersTable.$inferSelect | null
-		aspect: typeof aspectsTable.$inferSelect
-		race: typeof racesTable.$inferSelect
+type CombatMemberData = CombatMember & {
+	character: Character & {
+		player: Player | null
+		aspectAttribute: Attribute
+		race: Race
 	}
+}
+
+const queryInclude = {
+	initiativeAttribute: true,
+	members: {
+		include: {
+			character: {
+				include: {
+					player: true,
+					aspectAttribute: true,
+					race: true,
+				},
+			},
+		},
+	},
 }
 
 export async function getCombatState(guild: {
 	id: string
-}): Promise<CombatState | undefined> {
-	const state = await db.query.combatStatesTable.findFirst({
-		where: (fields, ops) => ops.eq(fields.discordGuildId, guild.id),
-		with: {
+}): Promise<CombatStateData | null> {
+	const state = await db.combatState.findFirst({
+		where: {
+			discordGuildId: guild.id,
+		},
+		include: {
 			initiativeAttribute: true,
-			participants: {
-				with: {
+			members: {
+				include: {
 					character: {
-						with: {
+						include: {
 							player: true,
-							aspect: true,
+							aspectAttribute: true,
 							race: true,
 						},
 					},
 				},
-				orderBy: (fields, ops) => ops.desc(fields.initiative),
 			},
 		},
 	})
 	return (
 		state && {
 			...state,
-			currentParticipant: state.participants[state.participantIndex],
+			currentParticipant: state.members[state.participantIndex],
 		}
 	)
 }
@@ -60,173 +73,217 @@ export async function startCombat({
 	...args
 }: {
 	guild: { id: string }
-	participants: { characterId: string; initiative: number }[]
+	members: { characterId: string; initiative: number }[]
 	initiativeAttributeId: string
-}): Promise<CombatState> {
-	await db.transaction(async (db) => {
-		const state = db
-			.insert(combatStatesTable)
-			.values({ discordGuildId: guild.id, initiativeAttributeId })
-			.onConflictDoNothing()
-			.returning()
-			.get()
-
-		for (const participant of args.participants) {
-			db.insert(combatParticipantsTable)
-				.values({ ...participant, combatStateGuildId: guild.id })
-				.onConflictDoUpdate({
-					target: [
-						combatParticipantsTable.characterId,
-						combatParticipantsTable.combatStateGuildId,
-					],
-					set: {
-						initiative: participant.initiative,
+}): Promise<CombatStateData> {
+	const state = await db.combatState.create({
+		data: {
+			discordGuildId: guild.id,
+			initiativeAttributeId,
+			participantIndex: 0,
+			round: 1,
+			members: {
+				connectOrCreate: args.members.map((member) => ({
+					where: {
+						characterId_combatStateGuildId: {
+							characterId: member.characterId,
+							combatStateGuildId: guild.id,
+						},
 					},
-				})
-				.returning()
-				.get()
-		}
-
-		return state
-	})
-	return expect(
-		await getCombatState({ id: guild.id }),
-		"Failed to create combat state",
-	)
-}
-
-export async function endCombat(guild: { id: string }) {
-	await db
-		.delete(combatStatesTable)
-		.where(eq(combatStatesTable.discordGuildId, guild.id))
-}
-
-export async function setParticipants(
-	state: CombatState,
-	participants: { characterId: string; initiative: number }[],
-) {
-	await db.transaction(async (db) => {
-		await db
-			.insert(combatParticipantsTable)
-			.values(
-				participants.map((participant) => ({
-					...participant,
-					combatStateGuildId: state.discordGuildId,
+					create: member,
 				})),
-			)
-			.onConflictDoNothing()
-
-		await db.delete(combatParticipantsTable).where(
-			and(
-				eq(combatParticipantsTable.combatStateGuildId, state.discordGuildId),
-				notInArray(
-					combatParticipantsTable.characterId,
-					participants.map((p) => p.characterId),
-				),
-			),
-		)
+			},
+		},
+		include: queryInclude,
 	})
-	return getCombatState({ id: state.discordGuildId })
-}
 
-export async function addParticipant(
-	state: CombatState,
-	participant: {
-		characterId: string
-		initiative: number
-	},
-) {
-	await db
-		.insert(combatParticipantsTable)
-		.values({
-			...participant,
-			combatStateGuildId: state.discordGuildId,
-		})
-		.onConflictDoNothing()
-	return getCombatState({ id: state.discordGuildId })
-}
-
-export async function removeParticipant(
-	state: CombatState,
-	characterId: string,
-) {
-	await db
-		.delete(combatParticipantsTable)
-		.where(
-			and(
-				eq(combatParticipantsTable.combatStateGuildId, state.discordGuildId),
-				eq(combatParticipantsTable.characterId, characterId),
-			),
-		)
 	return {
 		...state,
-		participants: state.participants.filter(
-			(p) => p.characterId !== characterId,
-		),
+		currentParticipant: state.members[state.participantIndex],
 	}
 }
 
+export async function endCombat(guild: { id: string }) {
+	await db.combatState.delete({
+		where: {
+			discordGuildId: guild.id,
+		},
+	})
+}
+
+export async function setParticipants(
+	state: CombatStateData,
+	participants: { characterId: string; initiative: number }[],
+): Promise<CombatStateData> {
+	const updated = await db.combatState.update({
+		where: {
+			discordGuildId: state.discordGuildId,
+		},
+		data: {
+			members: {
+				upsert: participants.map((participant) => ({
+					where: {
+						characterId_combatStateGuildId: {
+							characterId: participant.characterId,
+							combatStateGuildId: state.discordGuildId,
+						},
+					},
+					update: {
+						initiative: participant.initiative,
+					},
+					create: {
+						...participant,
+						combatStateGuildId: state.discordGuildId,
+					},
+				})),
+			},
+		},
+		include: {
+			members: queryInclude.members,
+		},
+	})
+	return {
+		...state,
+		...updated,
+		currentParticipant: updated.members[state.participantIndex],
+	}
+}
+
+export async function addParticipant(
+	state: CombatStateData,
+	data: {
+		characterId: string
+		initiative: number
+	},
+): Promise<CombatStateData> {
+	const updated = await db.combatState.update({
+		where: {
+			discordGuildId: state.discordGuildId,
+		},
+		data: {
+			members: {
+				connectOrCreate: {
+					where: {
+						characterId_combatStateGuildId: {
+							characterId: data.characterId,
+							combatStateGuildId: state.discordGuildId,
+						},
+					},
+					create: data,
+				},
+			},
+		},
+		include: {
+			members: queryInclude.members,
+		},
+	})
+	return { ...state, ...updated }
+}
+
+export async function removeParticipant(
+	state: CombatStateData,
+	characterId: string,
+): Promise<CombatStateData> {
+	const updated = await db.combatState.update({
+		where: {
+			discordGuildId: state.discordGuildId,
+		},
+		data: {
+			members: {
+				delete: {
+					characterId_combatStateGuildId: {
+						characterId,
+						combatStateGuildId: state.discordGuildId,
+					},
+				},
+			},
+		},
+		include: {
+			members: queryInclude.members,
+		},
+	})
+	return { ...state, ...updated }
+}
+
 export async function setParticipantIndex(
-	state: CombatState,
+	state: CombatStateData,
 	participantIndex: number,
 ) {
-	const updated = db
-		.update(combatStatesTable)
-		.set({ participantIndex })
-		.where(eq(combatStatesTable.discordGuildId, state.discordGuildId))
-		.returning()
-		.get()
-	return { ...state, ...updated }
+	const updated = await db.combatState.update({
+		where: {
+			discordGuildId: state.discordGuildId,
+		},
+		data: {
+			participantIndex,
+		},
+	})
+	return {
+		...state,
+		...updated,
+		currentParticipant: state.members[participantIndex],
+	}
 }
 
 export async function setParticipantInitiative(
-	state: CombatState,
+	state: CombatStateData,
 	characterId: string,
 	initiative: number,
 ) {
-	await db
-		.update(combatParticipantsTable)
-		.set({ initiative })
-		.where(
-			and(
-				eq(combatParticipantsTable.combatStateGuildId, state.discordGuildId),
-				eq(combatParticipantsTable.characterId, characterId),
-			),
-		)
-	return getCombatState({ id: state.discordGuildId })
+	const updated = await db.combatState.update({
+		where: {
+			discordGuildId: state.discordGuildId,
+		},
+		data: {
+			members: {
+				update: {
+					where: {
+						characterId_combatStateGuildId: {
+							characterId,
+							combatStateGuildId: state.discordGuildId,
+						},
+					},
+					data: {
+						initiative,
+					},
+				},
+			},
+		},
+		include: {
+			members: queryInclude.members,
+		},
+	})
+	return { ...state, ...updated }
 }
 
-export async function advanceCombat(state: CombatState) {
-	const nextIndex = (state.participantIndex + 1) % state.participants.length
+export async function advanceCombat(state: CombatStateData) {
+	const nextIndex = (state.participantIndex + 1) % state.members.length
 
-	const updated = db
-		.update(combatStatesTable)
-		.set({
+	const updated = await db.combatState.update({
+		where: {
+			discordGuildId: state.discordGuildId,
+		},
+		data: {
 			participantIndex: nextIndex,
 			round: state.round + (nextIndex === 0 ? 1 : 0),
-		})
-		.where(eq(combatStatesTable.discordGuildId, state.discordGuildId))
-		.returning()
-		.get()
+		},
+	})
 
-	return { ...state, ...updated }
+	return { ...state, ...updated, currentParticipant: state.members[nextIndex] }
 }
 
-export async function rewindCombat(state: CombatState) {
+export async function rewindCombat(state: CombatStateData) {
 	const nextIndex =
-		(state.participantIndex - 1 + state.participants.length) %
-		state.participants.length
+		(state.participantIndex - 1 + state.members.length) % state.members.length
 
-	const updated = db
-		.update(combatStatesTable)
-		.set({
+	const updated = await db.combatState.update({
+		where: {
+			discordGuildId: state.discordGuildId,
+		},
+		data: {
 			participantIndex: nextIndex,
-			round:
-				state.round - (nextIndex === state.participants.length - 1 ? 1 : 0),
-		})
-		.where(eq(combatStatesTable.discordGuildId, state.discordGuildId))
-		.returning()
-		.get()
+			round: state.round - (nextIndex === state.members.length - 1 ? 1 : 0),
+		},
+	})
 
-	return { ...state, ...updated }
+	return { ...state, ...updated, currentParticipant: state.members[nextIndex] }
 }

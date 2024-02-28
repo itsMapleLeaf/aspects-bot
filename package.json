@@ -4,17 +4,16 @@
 	"scripts": {
 		"dev": "tsx watch --clear-screen=false src/main.ts",
 		"test": "tsx --test",
-		"db:push": "drizzle-kit push:sqlite"
+		"db:push": "prisma db push"
 	},
 	"dependencies": {
 		"@notionhq/client": "2.2.14",
+		"@prisma/client": "5.10.2",
 		"better-sqlite3": "9.4.1",
 		"chalk": "5.3.0",
 		"colorjs.io": "0.4.5",
 		"discord.js": "14.14.1",
 		"dotenv": "16.4.5",
-		"drizzle-kit": "0.20.14",
-		"drizzle-orm": "0.29.3",
 		"lodash-es": "4.17.21",
 		"pretty-ms": "9.0.0",
 		"ts-dedent": "2.2.0",
@@ -26,6 +25,7 @@
 		"@types/lodash-es": "4.17.12",
 		"@types/node": "20.11.19",
 		"prettier": "3.2.5",
+		"prisma": "5.10.2",
 		"tsx": "4.7.1",
 		"typescript": "5.4.1-rc"
 	}

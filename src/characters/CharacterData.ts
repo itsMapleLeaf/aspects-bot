@@ -1,155 +1,132 @@
+import { Attribute, Character, Player, Race } from "@prisma/client"
 import { Snowflake } from "discord.js"
-import { eq } from "drizzle-orm"
 import { kebabCase } from "lodash-es"
 import { db } from "../db.ts"
 import { expect } from "../helpers/expect.ts"
-import { attributesTable, charactersTable, playersTable } from "../schema.ts"
-import { StrictOmit } from "../types.ts"
+import { OptionalKeys, RequiredKeys, StrictOmit } from "../types.ts"
 
-export type CharacterData = Awaited<ReturnType<typeof createCharacter>>
+export type CharacterData = Character & {
+	race: Race
+	aspectAttribute: Attribute
+	player?: Player | null
+	baseAttributeDice: ReturnType<typeof getAttributeDice>
+	maxHealth: number
+}
+
+const baseQueryArgs = {
+	include: { race: true, aspectAttribute: true, player: true },
+} as const
 
 export async function createCharacter({
 	playerDiscordId,
-	...insertData
-}: StrictOmit<typeof charactersTable.$inferInsert, "id" | "health"> & {
-	playerDiscordId: Snowflake | null
-}) {
-	const aspect = expect(
-		await db.query.aspectsTable.findFirst({
-			where: (fields, ops) => ops.eq(fields.id, insertData.aspectId),
-			with: { attribute: true },
-		}),
-	)
-
+	...data
+}: OptionalKeys<
+	StrictOmit<Character, "id" | "health">,
+	"fatigue" | "currency"
+> & {
+	playerDiscordId?: Snowflake
+	aspectId?: string
+}): Promise<CharacterData> {
 	const baseAttributeDice = getAttributeDice(
 		{
-			aspect,
-			secondaryAttributeId: insertData.secondaryAttributeId,
+			aspectAttributeId: data.aspectAttributeId,
+			secondaryAttributeId: data.secondaryAttributeId,
 		},
-		await db.query.attributesTable.findMany(),
+		await db.attribute.findMany(),
 	)
 	const maxHealth = getMaxHealth(baseAttributeDice)
 
-	const character = db
-		.insert(charactersTable)
-		.values({
-			...insertData,
-			id: kebabCase(insertData.name),
-			health: maxHealth,
-		})
-		.returning()
-		.get()
+	const id = kebabCase(data.name)
 
-	let player = null
-	if (playerDiscordId) {
-		player = await setPlayerCharacter(playerDiscordId, expect(character).id)
-	}
-
-	const race = expect(
-		await db.query.racesTable.findFirst({
-			where: (fields, ops) => ops.eq(fields.id, insertData.raceId),
+	const updates = {
+		...data,
+		health: maxHealth,
+		...(playerDiscordId && {
+			player: {
+				connectOrCreate: {
+					where: { discordUserId: playerDiscordId },
+					create: { discordUserId: playerDiscordId },
+				},
+			},
 		}),
-	)
+	} satisfies Partial<Character>
 
-	return {
-		...expect(character),
-		race,
-		aspect,
-		player,
-		baseAttributeDice,
-		maxHealth,
-	}
+	const character = await db.character.upsert({
+		where: { id },
+		create: {
+			...updates,
+			id,
+		},
+		update: updates,
+		...baseQueryArgs,
+	})
+
+	return await withDataProperties(character)
 }
 
-export async function getCharacter(
-	args: { characterId: string } | { discordUser: { id: Snowflake } },
-): Promise<CharacterData | undefined> {
-	let character
-	if ("characterId" in args) {
-		character = await db.query.charactersTable.findFirst({
-			where: (fields, ops) => ops.eq(fields.id, args.characterId),
-			with: {
-				race: true,
-				aspect: {
-					with: { attribute: true },
-				},
-				player: true,
-			},
-		})
-	} else {
-		const player = await db.query.playersTable.findFirst({
-			where: (fields, ops) => ops.eq(fields.discordUserId, args.discordUser.id),
-			columns: {},
-			with: {
-				character: {
-					with: {
-						race: true,
-						aspect: {
-							with: { attribute: true },
-						},
-						player: true,
-					},
-				},
-			},
-		})
-		character = player?.character
-	}
+export async function findCharacterById(
+	id: string,
+): Promise<CharacterData | null> {
+	const character = await db.character.findFirst({
+		where: { id },
+		...baseQueryArgs,
+	})
+	return character && (await withDataProperties(character))
+}
 
-	if (!character) return
+export async function findCharacterByPlayerId(
+	playerId: Snowflake,
+): Promise<CharacterData | null> {
+	const character = await db.character.findFirst({
+		where: { player: { discordUserId: playerId } },
+		...baseQueryArgs,
+	})
+	return character && (await withDataProperties(character))
+}
 
+async function withDataProperties<T extends Character>(character: T) {
 	const baseAttributeDice = getAttributeDice(
 		character,
-		await db.query.attributesTable.findMany(),
+		await db.attribute.findMany(),
 	)
 	const maxHealth = getMaxHealth(baseAttributeDice)
 	return { ...character, baseAttributeDice, maxHealth }
 }
 
-export async function updateCharacter(
-	id: string,
-	data: Partial<typeof charactersTable.$inferInsert>,
-) {
-	const updated = db
-		.update(charactersTable)
-		.set(data)
-		.where(eq(charactersTable.id, id))
-		.returning()
-		.get()
-	return expect(updated)
+export async function updateCharacter({
+	id,
+	...data
+}: RequiredKeys<Partial<Character>, "id">): Promise<CharacterData> {
+	const character = await db.character.update({
+		where: { id },
+		data,
+		...baseQueryArgs,
+	})
+	return await withDataProperties(character)
 }
 
 export async function setPlayerCharacter(
-	playerId: Snowflake,
+	discordUserId: Snowflake,
 	characterId: string,
 ) {
-	const player = db
-		.insert(playersTable)
-		.values({
-			discordUserId: playerId,
-			characterId,
-		})
-		.onConflictDoUpdate({
-			target: [playersTable.discordUserId],
-			set: {
-				characterId,
-			},
-		})
-		.returning()
-		.get()
-	return expect(player)
+	await db.player.upsert({
+		where: { discordUserId },
+		create: { discordUserId, characterId },
+		update: { characterId },
+	})
 }
 
 export function getAttributeDice(
 	character: {
-		aspect: { attributeId: string }
+		aspectAttributeId: string
 		secondaryAttributeId: string
 	},
-	attributes: (typeof attributesTable.$inferSelect)[],
+	attributes: Attribute[],
 ) {
 	return new Map(
 		attributes.map((attribute) => {
 			let die = 4
-			if (character.aspect.attributeId === attribute.id) {
+			if (character.aspectAttributeId === attribute.id) {
 				die = 8
 			} else if (character.secondaryAttributeId === attribute.id) {
 				die = 6

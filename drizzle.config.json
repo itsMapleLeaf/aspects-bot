@@ -1,9 +1,0 @@
-{
-	"schema": "./src/schema.ts",
-	"driver": "better-sqlite",
-	"dbCredentials": {
-		"url": "./data.sqlite"
-	},
-	"verbose": true,
-	"strict": true
-}

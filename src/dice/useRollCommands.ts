@@ -1,9 +1,11 @@
 import * as Discord from "discord.js"
-import { getCharacter, updateCharacter } from "../characters/CharacterData.ts"
+import {
+	findCharacterByPlayerId,
+	updateCharacter,
+} from "../characters/CharacterData.ts"
 import { db } from "../db.ts"
 import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
 import { join, map, range } from "../helpers/iterable.ts"
-import { charactersTable } from "../schema.ts"
 import { roll } from "./roll.ts"
 
 const attributeDice = [4, 6, 8, 12, 20] as const
@@ -70,11 +72,17 @@ export function useRollCommands() {
 			private: t.boolean("Hide this roll from everyone but yourself."),
 			character: t.string("The character to roll for", {
 				autocomplete: async (input) => {
-					const results = await db.query.charactersTable.findMany({
+					const results = await db.character.findMany({
 						...(input && {
-							where: (cols, ops) => ops.like(cols.name, `%${input}%`),
+							where: {
+								name: {
+									contains: input,
+								},
+							},
 						}),
-						orderBy: [charactersTable.name],
+						orderBy: {
+							name: "asc",
+						},
 					})
 
 					return results.map((c) => ({
@@ -86,9 +94,7 @@ export function useRollCommands() {
 		}),
 
 		async run({ interaction, options }) {
-			const character = await getCharacter({
-				discordUser: interaction.user,
-			})
+			const character = await findCharacterByPlayerId(interaction.user.id)
 			const fatigue = options.fatigue ?? character?.fatigue
 
 			const firstActionDie = roll(options.die)
@@ -135,7 +141,8 @@ export function useRollCommands() {
 				valueLines.push(`💔 Fatigue Damage: **${fatigueDamage}**`)
 				if (character) {
 					const previousHealth = character.health
-					await updateCharacter(character.id, {
+					await updateCharacter({
+						id: character.id,
 						health: Math.max(0, previousHealth - fatigueDamage),
 					})
 					valueLines.push(

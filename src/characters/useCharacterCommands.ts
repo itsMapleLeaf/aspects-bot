@@ -1,59 +1,50 @@
 import { Interaction, PermissionFlagsBits } from "discord.js"
-import { eq, ne, sql } from "drizzle-orm"
 import { startCase } from "lodash-es"
 import { db } from "../db.ts"
 import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
 import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
-import {
-	listAspectSkills,
-	listAspects,
-	listAttributes,
-	listGeneralSkills,
-	listRaces,
-} from "../game-data.ts"
+
+import { roll } from "../dice/roll.ts"
 import { raise } from "../helpers/errors.ts"
-import { expect } from "../helpers/expect.ts"
 import { exclude } from "../helpers/iterable.ts"
 import { randomItem } from "../helpers/random.ts"
 import {
-	aspectsTable,
-	attributesTable,
-	charactersTable,
-	racesTable,
-} from "../schema.ts"
-import {
 	createCharacter,
-	getCharacter,
+	findCharacterById,
+	findCharacterByPlayerId,
 	setPlayerCharacter,
 	updateCharacter,
 } from "./CharacterData.ts"
+import { autocompleteCharacter } from "./autocompleteCharacter.ts"
 import { createCharacterMessage } from "./characterMessage.ts"
 import { characterNames } from "./characterNames.ts"
 
-const raceChoices = (await listRaces()).map((race) => ({
-	name: race.name,
-	value: race.id,
-}))
+export async function useCharacterCommands() {
+	const raceChoices = (await db.race.findMany()).map((race) => ({
+		name: race.name,
+		value: race.id,
+	}))
 
-const aspectChoices = (await listAspects()).map((aspect) => ({
-	name: aspect.name,
-	value: aspect.id,
-}))
+	const aspectChoices = (await db.attribute.findMany()).map((attribute) => ({
+		name: attribute.aspectName,
+		value: attribute.aspectId,
+	}))
 
-const skillChoices = [
-	...(await listGeneralSkills()),
-	...(await listAspectSkills()),
-].map((skill) => ({
-	name: skill.name,
-	value: skill.id,
-}))
+	const skillChoices = [
+		...(await db.generalSkill.findMany()),
+		...(await db.aspectSkill.findMany()),
+	].map((skill) => ({
+		name: skill.name,
+		value: skill.id,
+	}))
 
-const attributeChoices = [...(await listAttributes())].map((attribute) => ({
-	name: attribute.name,
-	value: attribute.id,
-}))
+	const attributeChoices = [...(await db.attribute.findMany())].map(
+		(attribute) => ({
+			name: attribute.name,
+			value: attribute.id,
+		}),
+	)
 
-export function useCharacterCommands() {
 	useSlashCommand({
 		name: "create",
 		description: "Create a character. Leave values blank to generate them.",
@@ -74,8 +65,8 @@ export function useCharacterCommands() {
 		run: async ({ interaction, options }) => {
 			const existing =
 				options.name &&
-				(await db.query.charactersTable.findFirst({
-					where: (fields, ops) => ops.eq(fields.name, options.name as string),
+				(await db.character.findFirst({
+					where: { name: options.name },
 				}))
 
 			if (existing) {
@@ -84,57 +75,41 @@ export function useCharacterCommands() {
 				)
 			}
 
-			let aspectId = options.aspect
-			let aspect: { id: string; attributeId: string } | undefined
-			if (!aspectId) {
-				aspect = db
-					.select({
-						id: aspectsTable.id,
-						attributeId: aspectsTable.attributeId,
-					})
-					.from(aspectsTable)
-					.orderBy(sql`random()`)
-					.limit(1)
-					.get()
-				aspectId = expect(aspect).id
+			let aspectAttributeId: string
+			if (!options.aspect) {
+				const count = await db.attribute.count()
+				const aspectAttribute = await db.attribute.findFirstOrThrow({
+					skip: roll(count),
+				})
+				aspectAttributeId = aspectAttribute.id
+			} else {
+				const attribute = await db.attribute.findFirstOrThrow({
+					where: { aspectId: options.aspect },
+				})
+				aspectAttributeId = attribute.id
 			}
 
 			let raceId = options.race
 			if (!raceId) {
-				const race = db
-					.select({ id: racesTable.id })
-					.from(racesTable)
-					.orderBy(sql`random()`)
-					.limit(1)
-					.get()
-				raceId = expect(race).id
+				const count = await db.race.count()
+				const race = await db.race.findFirstOrThrow({
+					skip: roll(count),
+				})
+				raceId = race.id
 			}
 
 			let secondaryAttributeId = options.secondary_attribute
 			if (!secondaryAttributeId) {
-				aspect ??= db
-					.select({
-						id: aspectsTable.id,
-						attributeId: aspectsTable.attributeId,
-					})
-					.from(aspectsTable)
-					.where((fields) => eq(fields.id, aspectId))
-					.get()
+				const count = (await db.attribute.count()) - 1
+				const secondaryAttribute = await db.attribute.findFirstOrThrow({
+					where: { NOT: { id: aspectAttributeId } },
+					skip: roll(count),
+				})
 
-				const aspectAttributeId = expect(aspect).attributeId
-
-				const secondaryAttribute = db
-					.select({ id: attributesTable.id })
-					.from(attributesTable)
-					.where((fields) => ne(fields.id, aspectAttributeId))
-					.orderBy(sql`random()`)
-					.limit(1)
-					.get()
-
-				secondaryAttributeId = expect(secondaryAttribute).id
+				secondaryAttributeId = secondaryAttribute.id
 			}
 
-			const existingCharacters = await db.query.charactersTable.findMany()
+			const existingCharacters = await db.character.findMany()
 
 			const availableCharacterNames = exclude(
 				existingCharacters.map((c) => c.name),
@@ -152,9 +127,8 @@ export function useCharacterCommands() {
 
 			const character = await createCharacter({
 				name: name,
-				playerDiscordId: options.player?.id ?? null,
-				aspectId,
 				raceId,
+				aspectAttributeId,
 				secondaryAttributeId,
 				fatigue: options.fatigue ?? undefined,
 				currency: options.notes ?? undefined,
@@ -208,7 +182,8 @@ export function useCharacterCommands() {
 
 			const prevData = { ...character }
 
-			const updated = await updateCharacter(character.id, {
+			const updated = await updateCharacter({
+				id: character.id,
 				health: options.health ?? character.health,
 				fatigue: options.fatigue ?? character.fatigue,
 				currency: options.notes ?? character.currency,
@@ -260,13 +235,9 @@ export function useCharacterCommands() {
 		}),
 		defaultMemberPermissions: [PermissionFlagsBits.ManageGuild],
 		run: async ({ interaction, options }) => {
-			const character = await getCharacter({
-				characterId: options.character,
-			})
-
-			if (!character) {
-				throw new InteractionResponse("Sorry, I couldn't find that character.")
-			}
+			const character =
+				(await findCharacterById(options.character)) ??
+				raise(new InteractionResponse("Sorry, I couldn't find that character."))
 
 			await setPlayerCharacter(options.player.id, character.id)
 
@@ -283,32 +254,16 @@ async function getInteractionCharacter(
 	interaction: Interaction,
 ) {
 	if (characterId) {
-		const character = await getCharacter({ characterId })
+		const character = await findCharacterById(characterId)
 		return (
 			character ??
 			raise(new InteractionResponse("Sorry, I couldn't find that character."))
 		)
 	}
 
-	const character = await getCharacter({
-		discordUser: interaction.user,
-	})
+	const character = await findCharacterByPlayerId(interaction.user.id)
 	return (
 		character ??
 		raise(new InteractionResponse("You don't have a character assigned."))
 	)
-}
-
-async function autocompleteCharacter(input: string) {
-	const results = await db.query.charactersTable.findMany({
-		...(input && {
-			where: (cols, ops) => ops.like(cols.name, `%${input}%`),
-		}),
-		orderBy: [charactersTable.name],
-	})
-
-	return results.map((c) => ({
-		name: c.name,
-		value: c.id,
-	}))
 }

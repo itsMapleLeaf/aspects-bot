@@ -8,9 +8,9 @@ export function createCharacterMessage(character: CharacterData) {
 		``,
 
 		`${character.race.emoji} ${bold(character.race.name)}`,
-		`${character.aspect.emoji} ${bold(character.aspect.name)} (${
-			character.aspect.attribute.emoji
-		} ${character.aspect.attribute.name})`,
+		`${character.aspectAttribute.aspectEmoji} ${bold(character.aspectAttribute.aspectName)} (${
+			character.aspectAttribute.emoji
+		} ${character.aspectAttribute.name})`,
 		`🪙 ${bold(character.currency)} Notes`,
 		``,
 

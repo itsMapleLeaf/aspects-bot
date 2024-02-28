@@ -42,6 +42,12 @@ export function* take<T>(count: number, iterable: Iterable<T>) {
 	}
 }
 
+export function first<T>(iterable: Iterable<T>) {
+	for (const value of iterable) {
+		return value
+	}
+}
+
 type RangeArgs = [length: number] | [start: number, end: number]
 
 export function* range(...args: RangeArgs) {
