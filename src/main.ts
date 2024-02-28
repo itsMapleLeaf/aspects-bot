@@ -24,7 +24,7 @@ client.on("ready", (client) => {
 using _slashCommands = SlashCommandContext.provide(client)
 using _messageComponents = MessageComponentContext.provide(client)
 useRollCommands()
-useCharacterCommands()
+await useCharacterCommands()
 useCombatCommands()
 
 await Logger.async("Logging in", () => client.login(env.DISCORD_BOT_TOKEN))
