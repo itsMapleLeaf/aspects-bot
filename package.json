@@ -1,10 +1,13 @@
 {
 	"name": "aspects-bot",
 	"type": "module",
+	"packageManager": "pnpm@8.15.4+sha256.cea6d0bdf2de3a0549582da3983c70c92ffc577ff4410cbf190817ddc35137c2",
 	"scripts": {
 		"dev": "tsx watch --clear-screen=false src/main.ts",
+		"db:push": "prisma db push",
 		"test": "tsx --test",
-		"db:push": "prisma db push"
+		"lint": "eslint .",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@notionhq/client": "2.2.14",
