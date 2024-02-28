@@ -10,6 +10,25 @@
 - [x] track currency
 - [x] generate NPC names
 
+- [ ] /(health/fatigue/notes) add [amount] [character|"Everyone"]?
+
+  - when choosing "Everyone", if GM, show a followup message with a multi-select for characters to apply
+  - if character is not specified, use the player character, or show the select menu if GM
+
+- make /roll more useful
+
+  - [ ] alongside the `d*` options, show attributes and aspects
+    - when an attribute/aspect is selected, used the character argument if specified, or the player's character otherwise
+  - [ ] remove /action
+
+- [ ] list most recently used characters first
+- [ ] character privacy
+- [ ] buttons to reroll with daunting/eased/normal
+- [ ] button to reroll with different attribute
+- [ ] button to reroll with different difficulty
+- [ ] items
+- [ ] /milestone - leveling up
+
 - combat
 
   - /combat start
@@ -29,25 +48,6 @@
       - [x] rewind button
       - [x] end combat button
   - [ ] /combat add/remove [character]
-
-- [ ] /(health/fatigue/notes) add [amount] [character|"Everyone"]?
-
-  - when choosing "Everyone", if GM, show a followup message with a multi-select for characters to apply
-  - if character is not specified, use the player character, or show the select menu if GM
-
-- make /roll more useful
-
-  - [ ] alongside the `d*` options, show attributes and aspects
-    - when an attribute/aspect is selected, used the character argument if specified, or the player's character otherwise
-  - [ ] remove /action
-
-- [ ] list most recently used characters first
-- [ ] character privacy
-- [ ] buttons to reroll with daunting/eased/normal
-- [ ] button to reroll with different attribute
-- [ ] button to reroll with different difficulty
-- [ ] items
-- [ ] /milestone - leveling up
 
 ## other notes
 
