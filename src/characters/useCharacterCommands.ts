@@ -6,7 +6,8 @@ import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
 
 import { roll } from "../dice/roll.ts"
 import { raise } from "../helpers/errors.ts"
-import { exclude } from "../helpers/iterable.ts"
+import { arrayFromGenerator, exclude } from "../helpers/iterable.ts"
+import { objectKeys } from "../helpers/object.ts"
 import { randomItem } from "../helpers/random.ts"
 import {
 	createCharacter,
@@ -112,8 +113,9 @@ export async function useCharacterCommands() {
 			const existingCharacters = await db.character.findMany()
 
 			const availableCharacterNames = exclude(
+				characterNames,
 				existingCharacters.map((c) => c.name),
-			).from(characterNames)
+			)
 
 			const name = options.name ?? randomItem(availableCharacterNames)
 			if (!name) {
@@ -180,23 +182,23 @@ export async function useCharacterCommands() {
 				interaction,
 			)
 
-			const prevData = { ...character }
-
-			const updated = await updateCharacter({
+			await updateCharacter({
 				id: character.id,
 				health: options.health ?? character.health,
 				fatigue: options.fatigue ?? character.fatigue,
 				currency: options.notes ?? character.currency,
 			})
 
-			const diffLines = Object.entries(updated)
-				.map(([key, value]) => {
-					const prev = prevData[key as keyof typeof prevData]
-					if (prev !== value) {
-						return `- ${startCase(key)}: ${prev} -> **${value}**`
+			const diffLines = arrayFromGenerator(function* () {
+				for (let key of objectKeys(options)) {
+					if (key === "character") continue
+					const next = options[key]
+					const prev = character[key === "notes" ? "currency" : key]
+					if (prev !== next && next != null) {
+						yield `- ${startCase(key)}: ${prev} -> **${next}**`
 					}
-				})
-				.filter(Boolean)
+				}
+			})
 
 			if (diffLines.length === 0) {
 				await interaction.reply({

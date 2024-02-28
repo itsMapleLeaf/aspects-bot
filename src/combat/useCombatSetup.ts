@@ -112,7 +112,10 @@ export function useCombatSetup() {
 		// ensure we have at least two participants if there aren't enough players
 		const extraParticipants = take(
 			Math.max(0, 2 - selectedCharacterIds.size),
-			exclude(selectedCharacterIds).from(map(characters, (c) => c.id)),
+			exclude(
+				map(characters, (c) => c.id),
+				selectedCharacterIds,
+			),
 		)
 
 		const selected = new Set([...selectedCharacterIds, ...extraParticipants])

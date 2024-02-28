@@ -24,13 +24,22 @@ export function* excludeWhere<T>(
 	}
 }
 
-export function exclude<T>(exclusions: Iterable<T>) {
+export function* exclude<T>(
+	fromIterable: Iterable<T>,
+	exclusions: Iterable<T>,
+): Iterable<T> {
 	const set = new Set(exclusions)
-	return {
-		*from(iterable: Iterable<T>) {
-			yield* excludeWhere(iterable, (value) => set.has(value))
-		},
+	for (const value of fromIterable) {
+		if (!set.has(value)) yield value
 	}
+}
+
+export function* fromGenerator<T>(generator: () => Iterable<T>) {
+	yield* generator()
+}
+
+export function arrayFromGenerator<T>(generator: () => Iterable<T>) {
+	return [...generator()]
 }
 
 export function* take<T>(count: number, iterable: Iterable<T>) {
