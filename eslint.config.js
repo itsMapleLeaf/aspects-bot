@@ -14,7 +14,12 @@ export default tseslint.config({
 		},
 	},
 	rules: {
-		"@typescript-eslint/no-floating-promises": "warn",
+		"prefer-const": "error",
+		"object-shorthand": "error",
+		"@typescript-eslint/no-floating-promises": "error",
 		"@typescript-eslint/restrict-template-expressions": "error",
+		"@typescript-eslint/no-unnecessary-type-assertion": "error",
+		"@typescript-eslint/no-inferrable-types": "error",
+		"@typescript-eslint/no-redundant-type-constituents": "error",
 	},
 })
