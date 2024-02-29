@@ -4,7 +4,6 @@ await Logger.async(`Loading game data`, loadGameData)
 
 import * as Discord from "discord.js"
 import { useCharacterCommands } from "./characters/useCharacterCommands.ts"
-import { useHealCommands } from "./characters/useHealCommands.ts"
 import { useCombatCommands } from "./combat/useCombatCommands.ts"
 import { useRollCommands } from "./dice/useRollCommands.ts"
 import { SlashCommandContext } from "./discord/commands/SlashCommandContext.ts"
@@ -26,7 +25,7 @@ using _slashCommands = SlashCommandContext.provide(client)
 using _messageComponents = MessageComponentContext.provide(client)
 useRollCommands()
 await useCharacterCommands()
-useHealCommands()
+// useHealCommands()
 useCombatCommands()
 
 await Logger.async("Logging in", () => client.login(env.DISCORD_BOT_TOKEN))

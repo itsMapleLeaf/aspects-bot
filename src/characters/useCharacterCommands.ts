@@ -1,4 +1,5 @@
-import { Interaction, PermissionFlagsBits } from "discord.js"
+import { Character } from "@prisma/client"
+import { Interaction, PermissionFlagsBits, inlineCode } from "discord.js"
 import { startCase } from "lodash-es"
 import { db } from "../db.ts"
 import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
@@ -17,6 +18,7 @@ import {
 import { autocompleteCharacter } from "./autocompleteCharacter.ts"
 import { createCharacterMessage } from "./characterMessage.ts"
 import { characterNames } from "./characterNames.ts"
+import { useCharacterInteraction } from "./useCharacterInteraction.ts"
 
 export async function useCharacterCommands() {
 	const raceChoices = (await db.race.findMany()).map((race) => ({
@@ -156,64 +158,6 @@ export async function useCharacterCommands() {
 	})
 
 	useSlashCommand({
-		name: "update",
-		description: "Set a character's attribute, skill, or aspect",
-		options: (t) => ({
-			character: t.string("The character to update. Omit to use your own", {
-				autocomplete: autocompleteCharacter,
-			}),
-			health: t.integer("The character's health"),
-			fatigue: t.integer("The character's fatigue"),
-			notes: t.integer("The character's notes (currency) amount"),
-		}),
-		run: async ({ interaction, options }) => {
-			const character = await getInteractionCharacter(
-				options.character,
-				interaction,
-			)
-
-			await updateCharacter({
-				id: character.id,
-				health: options.health ?? character.health,
-				fatigue: options.fatigue ?? character.fatigue,
-				currency: options.notes ?? character.currency,
-			})
-
-			const diffLines = arrayFromGenerator(function* () {
-				for (const key of objectKeys(options)) {
-					if (key === "character") continue
-					const next = options[key]
-					const prev = character[key === "notes" ? "currency" : key]
-					if (prev !== next && next != null) {
-						yield `- ${startCase(key)}: ${prev} -> **${next}**`
-					}
-				}
-			})
-
-			if (diffLines.length === 0) {
-				await interaction.reply({
-					content: "No changes made.",
-					ephemeral: true,
-				})
-				return
-			}
-
-			const isServerAdmin =
-				interaction.inCachedGuild() &&
-				interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)
-
-			await interaction.reply({
-				content: [`Updated **${character.name}**:`, ...diffLines].join("\n"),
-				allowedMentions: { users: [], roles: [] },
-
-				// temporary: make this private when called by the gm
-				// ideally, this'll later be based on a character visibility setting
-				ephemeral: isServerAdmin,
-			})
-		},
-	})
-
-	useSlashCommand({
 		name: "assign",
 		description: "Assign a character to a player",
 		options: (t) => ({
@@ -239,6 +183,146 @@ export async function useCharacterCommands() {
 			})
 		},
 	})
+
+	let currentUpdates: Partial<Character> | undefined
+
+	const characterUpdateInteraction = useCharacterInteraction({
+		selectCustomId: "update:characters",
+		async onSubmit(characters) {
+			if (!currentUpdates) {
+				return {
+					content: `Oops, it looks like this command expired. Try again.`,
+				}
+			}
+
+			const updates = currentUpdates
+			currentUpdates = undefined
+
+			for (const character of characters) {
+				await updateCharacter({
+					id: character.id,
+					health: updates.health ?? character.health,
+					fatigue: updates.fatigue ?? character.fatigue,
+					currency: updates.currency ?? character.currency,
+				})
+			}
+
+			const contentLines = arrayFromGenerator(function* () {
+				for (const character of characters) {
+					yield `Updated **${character.name}**:`
+					for (const key of objectKeys(updates)) {
+						const prev = character[key]
+						const next = updates[key]
+						if (next !== undefined) {
+							yield `- ${startCase(key)}: ${prev} -> **${next}**`
+						}
+					}
+				}
+			})
+
+			if (contentLines.length === 0) {
+				return { content: "No changes made." }
+			}
+
+			return { content: contentLines.join("\n") }
+		},
+	})
+
+	useSlashCommand({
+		name: "update",
+		description: "Set a character's health, fatigue, or notes",
+		options: (t) => ({
+			character: t.string("The character to update. Omit to use your own", {
+				autocomplete: autocompleteCharacter,
+			}),
+			health: t.integer("The character's health"),
+			fatigue: t.integer("The character's fatigue"),
+			notes: t.integer("The character's notes (currency) amount"),
+		}),
+		run: async ({ interaction, options }) => {
+			currentUpdates = {
+				health: requireOptionalPositiveInteger(options, "health"),
+				fatigue: requireOptionalPositiveInteger(options, "fatigue"),
+				currency: requireOptionalPositiveInteger(options, "notes"),
+			}
+			await characterUpdateInteraction.handleInteraction(
+				interaction,
+				options.character,
+				"Select characters to update",
+			)
+		},
+	})
+
+	useSlashCommand({
+		name: "heal",
+		description: "Gain health",
+		options: (t) => ({
+			health: t.integer("The amount to heal", { required: true }),
+			character: t.string("The character to heal", {
+				autocomplete: autocompleteCharacter,
+			}),
+		}),
+		run: async ({ interaction, options }) => {
+			currentUpdates = {
+				health: requirePositiveInteger(options, "health"),
+			}
+			await characterUpdateInteraction.handleInteraction(
+				interaction,
+				options.character,
+				`Select characters to heal for ${options.health} health`,
+			)
+		},
+	})
+
+	useSlashCommand({
+		name: "damage",
+		description: "Deal damage",
+		options: (t) => ({
+			damage: t.integer("The damage amount", { required: true }),
+			character: t.string("The character to damage", {
+				autocomplete: autocompleteCharacter,
+			}),
+		}),
+		run: async ({ interaction, options }) => {
+			currentUpdates = {
+				health: -requirePositiveInteger(options, "damage"),
+			}
+			await characterUpdateInteraction.handleInteraction(
+				interaction,
+				options.character,
+				`Select characters to deal ${options.damage} damage`,
+			)
+		},
+	})
+}
+
+function requireOptionalPositiveInteger<OptionName extends string>(
+	options: Record<OptionName, number | null>,
+	optionName: OptionName,
+) {
+	const value = options[optionName]
+	if (value == null) {
+		return undefined
+	}
+	if (value < 1) {
+		throw new InteractionResponse(
+			`${inlineCode(optionName)} must be a positive integer.`,
+		)
+	}
+	return value
+}
+
+function requirePositiveInteger<OptionName extends string>(
+	options: Record<OptionName, number>,
+	optionName: OptionName,
+) {
+	const value = options[optionName]
+	if (value < 1) {
+		throw new InteractionResponse(
+			`${inlineCode(optionName)} must be a positive integer.`,
+		)
+	}
+	return value
 }
 
 async function getInteractionCharacter(
