@@ -1,14 +1,12 @@
 import * as Discord from "discord.js"
 import { StrictOmit } from "../../types.ts"
-import { MessageComponentContext } from "./MessageComponentContext.ts"
+import { messageComponentStore } from "./MessageComponentStore.ts"
 
 export function useStringSelect(args: {
 	customId: string
 	onSelect: (interaction: Discord.StringSelectMenuInteraction) => Promise<void>
 }) {
-	const store = MessageComponentContext.use()
-
-	store.handlers.set(args.customId, async (interaction) => {
+	messageComponentStore.addHandler(args.customId, async (interaction) => {
 		if (!interaction.isStringSelectMenu()) return
 		await args.onSelect(interaction)
 	})

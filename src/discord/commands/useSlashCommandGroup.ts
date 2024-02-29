@@ -1,6 +1,6 @@
 import * as Discord from "discord.js"
 import { Logger } from "../../logger.ts"
-import { SlashCommand, SlashCommandContext } from "./SlashCommandContext.ts"
+import { SlashCommand, commandStore } from "./CommandStore.ts"
 import {
 	OptionRecord,
 	SlashCommandArgs,
@@ -16,10 +16,9 @@ export function useSlashCommandGroup(
 	description: string,
 	setup: (group: GroupHandle) => void,
 ) {
-	const context = SlashCommandContext.use()
 	const commands = new Map<string, SlashCommand>()
 
-	context.addCommand({
+	commandStore.addCommand({
 		get data() {
 			return {
 				name,
@@ -88,7 +87,7 @@ export function useSlashCommandGroup(
 
 	setup({
 		add<Options extends OptionRecord>(args: SlashCommandArgs<Options>) {
-			commands.set(args.name, defineSlashCommand(args, context))
+			commands.set(args.name, defineSlashCommand(args))
 		},
 	})
 }

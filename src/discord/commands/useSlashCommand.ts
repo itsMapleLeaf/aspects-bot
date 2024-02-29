@@ -1,12 +1,11 @@
 import * as Discord from "discord.js"
 import { Override, Simplify, StrictOmit } from "../../types.ts"
-import { SlashCommand, SlashCommandContext } from "./SlashCommandContext.ts"
+import { SlashCommand, commandStore } from "./CommandStore.ts"
 
 export function useSlashCommand<Options extends OptionRecord>(
 	args: SlashCommandArgs<Options>,
 ) {
-	const store = SlashCommandContext.use()
-	return store.addCommand(defineSlashCommand<Options>(args, store))
+	return commandStore.addCommand(defineSlashCommand<Options>(args))
 }
 
 export type SlashCommandArgs<Options extends OptionRecord> = Override<
@@ -23,13 +22,12 @@ export type SlashCommandArgs<Options extends OptionRecord> = Override<
 
 export function defineSlashCommand<Options extends OptionRecord>(
 	args: SlashCommandArgs<Options>,
-	context: typeof SlashCommandContext.$type,
 ): SlashCommand {
 	const options = args.options?.(optionTypes)
 
 	for (const [name, option] of Object.entries(options ?? {})) {
 		if (option.autocomplete) {
-			context.addAutocompletion(args.name, name, {
+			commandStore.addAutocompletion(args.name, name, {
 				autocomplete: option.autocomplete,
 			})
 		}
