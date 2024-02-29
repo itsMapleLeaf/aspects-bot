@@ -6,7 +6,7 @@
 		"node": ">=21"
 	},
 	"scripts": {
-		"dev": "node --import promise.withresolvers/auto --import tsx --watch-path=src --watch-preserve-output --enable-source-maps src/main.ts",
+		"dev": "tsx watch --clear-screen=false --import promise.withresolvers/auto --enable-source-maps src/main.ts",
 		"db:push": "prisma db push",
 		"test": "tsx --test",
 		"lint": "eslint .",
