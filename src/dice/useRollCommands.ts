@@ -31,7 +31,7 @@ export function useRollCommands() {
 				choices: [
 					...diceChoices,
 					{ name: "d2", value: 2 },
-					{ name: "d10", value: 2 },
+					{ name: "d10", value: 10 },
 					{ name: "d100", value: 100 },
 				],
 			}),
