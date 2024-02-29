@@ -10,9 +10,8 @@
 - [x] track currency
 - [x] generate NPC names
 
-- [ ] /(health/fatigue/notes) add [amount] [character|"Everyone"]?
+- [ ] /(health/fatigue/notes) (add/subtract) [amount] [character]?
 
-  - when choosing "Everyone", if GM, show a followup message with a multi-select for characters to apply
   - if character is not specified, use the player character, or show the select menu if GM
 
 - make /roll more useful
@@ -21,13 +20,13 @@
     - when an attribute/aspect is selected, used the character argument if specified, or the player's character otherwise
   - [ ] remove /action
 
+- [ ] improved character viewer UI, where you can select character profiles from a dropdown
 - [ ] list most recently used characters first
 - [ ] character privacy
 - [ ] buttons to reroll with daunting/eased/normal
 - [ ] button to reroll with different attribute
 - [ ] button to reroll with different difficulty
 - [ ] items
-- [ ] /milestone - leveling up
 
 - combat
 

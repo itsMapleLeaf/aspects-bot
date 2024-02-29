@@ -7,7 +7,15 @@ import {
 	defineSlashCommand,
 } from "./useSlashCommand.ts"
 
-export function useSlashCommandGroup(name: string, description: string) {
+type GroupHandle = {
+	add<Options extends OptionRecord>(args: SlashCommandArgs<Options>): void
+}
+
+export function useSlashCommandGroup(
+	name: string,
+	description: string,
+	setup: (group: GroupHandle) => void,
+) {
 	const context = SlashCommandContext.use()
 	const commands = new Map<string, SlashCommand>()
 
@@ -78,9 +86,9 @@ export function useSlashCommandGroup(name: string, description: string) {
 		}
 	}
 
-	return {
+	setup({
 		add<Options extends OptionRecord>(args: SlashCommandArgs<Options>) {
 			commands.set(args.name, defineSlashCommand(args, context))
 		},
-	}
+	})
 }

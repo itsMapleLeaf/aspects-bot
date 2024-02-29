@@ -1,5 +1,5 @@
 import { Attribute, Character, Player, Race } from "@prisma/client"
-import { Snowflake } from "discord.js"
+import { Snowflake, bold } from "discord.js"
 import { kebabCase } from "lodash-es"
 import { db } from "../db.ts"
 import { expect } from "../helpers/expect.ts"
@@ -140,4 +140,25 @@ export function getMaxHealth(
 	baseAttributeDice: Awaited<ReturnType<typeof getAttributeDice>>,
 ) {
 	return expect(baseAttributeDice.get("strength")).die * 2
+}
+
+type AddHealthResult = Awaited<ReturnType<typeof addHealth>>
+export async function addHealth(
+	character: Character,
+	amount: number,
+	attributes: Attribute[],
+) {
+	const maxHealth = getMaxHealth(getAttributeDice(character, attributes))
+	const newHealth = Math.min(character.health + amount, maxHealth)
+	await db.character.update({
+		where: { id: character.id },
+		data: {
+			health: newHealth,
+		},
+	})
+	return { character, oldHealth: character.health, newHealth, maxHealth }
+}
+
+export function formatHealthResult(result: AddHealthResult) {
+	return `${result.character.name}: ${result.oldHealth} -> ${bold(`${result.newHealth}/${result.maxHealth}`)}`
 }

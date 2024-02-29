@@ -3,12 +3,10 @@ import { startCase } from "lodash-es"
 import { db } from "../db.ts"
 import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
 import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
-
-import { roll } from "../dice/roll.ts"
 import { raise } from "../helpers/errors.ts"
 import { arrayFromGenerator, exclude } from "../helpers/iterable.ts"
 import { objectKeys } from "../helpers/object.ts"
-import { randomItem } from "../helpers/random.ts"
+import { randomInt, randomItem } from "../helpers/random.ts"
 import {
 	createCharacter,
 	findCharacterById,
@@ -29,14 +27,6 @@ export async function useCharacterCommands() {
 	const aspectChoices = (await db.attribute.findMany()).map((attribute) => ({
 		name: attribute.aspectName,
 		value: attribute.aspectId,
-	}))
-
-	const skillChoices = [
-		...(await db.generalSkill.findMany()),
-		...(await db.aspectSkill.findMany()),
-	].map((skill) => ({
-		name: skill.name,
-		value: skill.id,
 	}))
 
 	const attributeChoices = [...(await db.attribute.findMany())].map(
@@ -80,7 +70,7 @@ export async function useCharacterCommands() {
 			if (!options.aspect) {
 				const count = await db.attribute.count()
 				const aspectAttribute = await db.attribute.findFirstOrThrow({
-					skip: roll(count),
+					skip: randomInt(count),
 				})
 				aspectAttributeId = aspectAttribute.id
 			} else {
@@ -94,7 +84,7 @@ export async function useCharacterCommands() {
 			if (!raceId) {
 				const count = await db.race.count()
 				const race = await db.race.findFirstOrThrow({
-					skip: roll(count),
+					skip: randomInt(count),
 				})
 				raceId = race.id
 			}
@@ -104,7 +94,7 @@ export async function useCharacterCommands() {
 				const count = (await db.attribute.count()) - 1
 				const secondaryAttribute = await db.attribute.findFirstOrThrow({
 					where: { NOT: { id: aspectAttributeId } },
-					skip: roll(count),
+					skip: randomInt(count),
 				})
 
 				secondaryAttributeId = secondaryAttribute.id
@@ -128,7 +118,7 @@ export async function useCharacterCommands() {
 			}
 
 			const character = await createCharacter({
-				name: name,
+				name,
 				raceId,
 				aspectAttributeId,
 				secondaryAttributeId,
@@ -190,7 +180,7 @@ export async function useCharacterCommands() {
 			})
 
 			const diffLines = arrayFromGenerator(function* () {
-				for (let key of objectKeys(options)) {
+				for (const key of objectKeys(options)) {
 					if (key === "character") continue
 					const next = options[key]
 					const prev = character[key === "notes" ? "currency" : key]

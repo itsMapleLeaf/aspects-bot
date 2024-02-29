@@ -31,3 +31,5 @@ export type RequiredKeys<T, K extends keyof T> = Simplify<
 export type OptionalKeys<T, K extends keyof T> = Simplify<
 	Partial<Pick<T, K>> & StrictOmit<T, K>
 >
+
+export type Nullish<T> = T | null | undefined
