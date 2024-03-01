@@ -17,6 +17,7 @@ export default tseslint.config({
 		"prefer-const": "error",
 		"object-shorthand": "error",
 		"@typescript-eslint/no-floating-promises": "error",
+		"@typescript-eslint/no-unused-vars": ["error", { ignoreRestSiblings: true }],
 		"@typescript-eslint/restrict-template-expressions": "error",
 		"@typescript-eslint/no-unnecessary-type-assertion": "error",
 		"@typescript-eslint/no-inferrable-types": "error",
