@@ -2,9 +2,6 @@
 	"name": "aspects-bot",
 	"type": "module",
 	"packageManager": "pnpm@8.15.4+sha256.cea6d0bdf2de3a0549582da3983c70c92ffc577ff4410cbf190817ddc35137c2",
-	"engines": {
-		"node": ">=21"
-	},
 	"scripts": {
 		"build": "tsc",
 		"start": "node --enable-source-maps dist/main.js",
