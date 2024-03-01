@@ -1,8 +1,8 @@
-import * as Discord from "discord.js"
+import { CharacterModel } from "../characters/CharacterModel.ts"
 import { autocompleteCharacter } from "../characters/autocompleteCharacter.ts"
+import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
 import { useGuildSlashCommand } from "../discord/commands/useGuildSlashCommand.ts"
-import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
-import { join, map, range } from "../helpers/iterable.ts"
+import { ActionDice, Attributes, Dice } from "../game/tables.ts"
 import { roll } from "./roll.ts"
 
 const attributeDice = [4, 6, 8, 12, 20] as const
@@ -18,78 +18,64 @@ const modifyChoices = [
 ] as const
 
 export function useRollCommands() {
-	useSlashCommand({
-		name: "roll",
-		description: "Make a simple dice roll",
-
-		options: (t) => ({
-			die: t.integer("The die to roll", {
-				required: true,
-				choices: [
-					...diceChoices,
-					{ name: "d2", value: 2 },
-					{ name: "d10", value: 10 },
-					{ name: "d100", value: 100 },
-				],
-			}),
-			count: t.integer("The number of dice to roll, default 1"),
-			private: t.boolean("Hide this roll from everyone but yourself."),
-		}),
-
-		async run({ interaction, options }) {
-			const count = options.count ?? 1
-
-			const rolls = map(range(count), () => Discord.bold(`${roll(options.die)}`))
-
-			return {
-				content: `🎲 ${count}d${options.die} => ${join(rolls, ", ")}`,
-				ephemeral: options.private ?? false,
-			}
-		},
-	})
-
 	useGuildSlashCommand({
-		name: "action",
-		description: "Make an action roll",
+		name: "roll",
+		description: "Roll some dice",
 
 		options: (t) => ({
-			die: t.integer("The die to roll", {
+			die: t.string("The dice or attribute to roll with", {
 				required: true,
-				choices: diceChoices,
+				choices: [...Dice.choices(), ...Attributes.choices()],
 			}),
-			difficulty: t.integer("The difficulty die to roll against", {
-				choices: diceChoices,
+			difficulty: t.string("The difficulty die to roll against", {
+				choices: ActionDice.choices(),
 			}),
-			modify: t.string("Make the roll easier or harder", {
+			modify: t.string("Make the roll daunting or eased", {
 				choices: modifyChoices,
 			}),
-			fatigue: t.integer("Number of fatigue dice to roll"),
+			fatigue: t.integer("Number of fatigue dice to roll. Uses your current fatigue by default."),
 			private: t.boolean("Hide this roll from everyone but yourself."),
-			character: t.string("The character to roll for", {
+			character: t.string("The character to roll for. Uses your character by default.", {
 				autocomplete: autocompleteCharacter,
 			}),
 		}),
 
-		async run({ interaction, options, getInteractingUserCharacter }) {
-			const character = await getInteractingUserCharacter()
+		async run({ options, getInteractingUserCharacter }) {
+			let character = await getInteractingUserCharacter()
+			if (!character && options.character) {
+				character = await CharacterModel.getById(options.character)
+			}
+
 			const fatigue = options.fatigue ?? character?.data.fatigue
 
-			const firstActionDie = roll(options.die)
+			let actionDie: number
+			if (Attributes.isKey(options.die)) {
+				if (!character) {
+					throw new InteractionResponse(
+						"You must have or specify a character to roll an attribute die.",
+					)
+				}
+				actionDie = character.attributes[options.die]
+			} else {
+				actionDie = Dice.getValue(options.die)
+			}
+
+			const firstActionDie = roll(actionDie)
 			let secondActionDie
 			let actionResult = firstActionDie
 			let difficultyResult
 			let fatigueResults
 
 			if (options.modify === "eased") {
-				secondActionDie = roll(options.die)
+				secondActionDie = roll(actionDie)
 				actionResult = Math.max(firstActionDie, secondActionDie)
 			} else if (options.modify === "daunting") {
-				secondActionDie = roll(options.die)
+				secondActionDie = roll(actionDie)
 				actionResult = Math.min(firstActionDie, secondActionDie)
 			}
 
 			if (options.difficulty) {
-				difficultyResult = roll(options.difficulty)
+				difficultyResult = roll(Dice.getValue(options.difficulty))
 			}
 
 			if (fatigue) {
@@ -127,8 +113,8 @@ export function useRollCommands() {
 			const diceLines = []
 
 			const actionDiceList = secondActionDie
-				? `2d${options.die} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
-				: `1d${options.die} -> **${actionResult}**`
+				? `2d${actionDie} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
+				: `1d${actionDie} -> **${actionResult}**`
 			diceLines.push(`⚡ Action Dice: ${actionDiceList}`)
 
 			if (options.difficulty) {

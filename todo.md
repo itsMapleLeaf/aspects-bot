@@ -16,9 +16,9 @@
 
 - make /roll more useful
 
-  - [ ] alongside the `d*` options, show attributes and aspects
+  - [x] alongside the `d*` options, show attributes and aspects
     - when an attribute/aspect is selected, used the character argument if specified, or the player's character otherwise
-  - [ ] remove /action
+  - [x] remove /action
 
 - [ ] improved character viewer UI, where you can select character profiles from a dropdown
 - [ ] list most recently used characters first

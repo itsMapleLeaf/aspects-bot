@@ -163,6 +163,8 @@ export class CharacterModel {
 			🪙 ${Discord.bold(String(this.data.currency))} Notes
 
 			${join(this.formatAttributes(), "\n")}
+
+			${this.data.player ? `👤 ${Discord.userMention(this.data.player.id)}` : ""}
 		`
 	}
 

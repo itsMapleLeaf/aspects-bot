@@ -167,7 +167,7 @@ export async function useCharacterCommands() {
 				health: adjust(character.health, args.options.health),
 				fatigue: adjust(character.data.fatigue, args.options.fatigue),
 				currency: adjust(character.data.currency, args.options.notes),
-				...(args.options.player && { playerId: args.options.player.id }),
+				...(args.options.player && { player: { id: args.options.player.id } }),
 			})
 
 			return {
