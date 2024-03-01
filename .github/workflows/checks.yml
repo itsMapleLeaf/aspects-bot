@@ -25,5 +25,7 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+      - name: Build
+        run: pnpm build
       - name: Run ${{ matrix.script }}
         run: pnpm run ${{ matrix.script }}
