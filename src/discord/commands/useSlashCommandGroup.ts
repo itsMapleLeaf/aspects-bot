@@ -1,7 +1,7 @@
 import * as Discord from "discord.js"
-import { Logger } from "../../logger.ts"
-import { type SlashCommand, commandStore } from "./CommandStore.ts"
-import { type OptionRecord, type SlashCommandArgs, defineSlashCommand } from "./useSlashCommand.ts"
+import { Logger } from "../../logger.js"
+import { commandStore, type SlashCommand } from "./CommandStore.js"
+import { defineSlashCommand, type OptionRecord, type SlashCommandArgs } from "./useSlashCommand.js"
 
 type GroupHandle = {
 	add<Options extends OptionRecord>(args: SlashCommandArgs<Options>): void

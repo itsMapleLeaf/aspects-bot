@@ -1,4 +1,4 @@
-import { Logger } from "../logger.ts"
+import { Logger } from "../logger.js"
 
 /**
  * Raises an error if the value is null or undefined.

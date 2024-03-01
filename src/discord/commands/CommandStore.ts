@@ -1,8 +1,8 @@
 import * as Discord from "discord.js"
 import { inspect } from "util"
-import { join, map } from "../../helpers/iterable.ts"
-import { Logger } from "../../logger.ts"
-import { InteractionResponse } from "./InteractionResponse.ts"
+import { join, map } from "../../helpers/iterable.js"
+import { Logger } from "../../logger.js"
+import { InteractionResponse } from "./InteractionResponse.js"
 
 export type SlashCommand = {
 	data: Discord.ApplicationCommandData

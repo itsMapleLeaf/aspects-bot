@@ -1,10 +1,10 @@
 import { inlineCode } from "discord.js"
-import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
-import { useGameMasterSlashCommand } from "../discord/commands/useGameMasterSlashCommand.ts"
-import { raise } from "../helpers/errors.ts"
-import { CombatStateModel } from "./CombatStateModel.ts"
-import { useCombatSetup } from "./useCombatSetup.ts"
-import { useCombatTracker } from "./useCombatTracker.ts"
+import { InteractionResponse } from "../discord/commands/InteractionResponse.js"
+import { useGameMasterSlashCommand } from "../discord/commands/useGameMasterSlashCommand.js"
+import { raise } from "../helpers/errors.js"
+import { CombatStateModel } from "./CombatStateModel.js"
+import { useCombatSetup } from "./useCombatSetup.js"
+import { useCombatTracker } from "./useCombatTracker.js"
 
 export function useCombatCommands() {
 	const setup = useCombatSetup()

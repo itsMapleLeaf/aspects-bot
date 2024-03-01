@@ -1,4 +1,4 @@
-import type { Falsy } from "../types.ts"
+import type { Falsy } from "../types.js"
 
 export function* map<T, V>(iterable: Iterable<T>, mapper: (value: T) => V) {
 	for (const value of iterable) {
@@ -6,28 +6,19 @@ export function* map<T, V>(iterable: Iterable<T>, mapper: (value: T) => V) {
 	}
 }
 
-export function* filter<T>(
-	iterable: Iterable<T>,
-	predicate: (value: T) => true | Falsy,
-) {
+export function* filter<T>(iterable: Iterable<T>, predicate: (value: T) => true | Falsy) {
 	for (const value of iterable) {
 		if (predicate(value)) yield value
 	}
 }
 
-export function* excludeWhere<T>(
-	iterable: Iterable<T>,
-	predicate: (value: T) => true | Falsy,
-) {
+export function* excludeWhere<T>(iterable: Iterable<T>, predicate: (value: T) => true | Falsy) {
 	for (const value of iterable) {
 		if (!predicate(value)) yield value
 	}
 }
 
-export function* exclude<T>(
-	fromIterable: Iterable<T>,
-	exclusions: Iterable<T>,
-): Iterable<T> {
+export function* exclude<T>(fromIterable: Iterable<T>, exclusions: Iterable<T>): Iterable<T> {
 	const set = new Set(exclusions)
 	for (const value of fromIterable) {
 		if (!set.has(value)) yield value
@@ -42,9 +33,9 @@ export function arrayFromGenerator<T>(generator: () => Iterable<T>) {
 	return [...generator()]
 }
 
-export function recordFromEntries<
-	const Entry extends readonly [PropertyKey, unknown],
->(entries: Iterable<Entry>) {
+export function recordFromEntries<const Entry extends readonly [PropertyKey, unknown]>(
+	entries: Iterable<Entry>,
+) {
 	return Object.fromEntries(entries) as Record<Entry[0], Entry[1]>
 }
 
@@ -100,16 +91,12 @@ export function firstWhereReturning<T, V>(
 
 export function keyedBy<Item, Key>(
 	iterable: Iterable<Item>,
-	key:
-		| ((item: Item) => Key)
-		| { [K in keyof Item]: Item[K] extends Key ? K : never }[keyof Item],
+	key: ((item: Item) => Key) | { [K in keyof Item]: Item[K] extends Key ? K : never }[keyof Item],
 ) {
 	const map = new Map<Key, Item>()
 	for (const value of iterable) {
 		const mapKey =
-			typeof key === "function" && key instanceof Function
-				? key(value)
-				: (value[key] as Key)
+			typeof key === "function" && key instanceof Function ? key(value) : (value[key] as Key)
 		map.set(mapKey, value)
 	}
 	return map

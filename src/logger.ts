@@ -2,7 +2,7 @@ import chalk from "chalk"
 import Color from "colorjs.io"
 import prettyMilliseconds from "pretty-ms"
 import { inspect } from "util"
-import type { Awaitable } from "./types.ts"
+import type { Awaitable } from "./types.js"
 
 class Formatter {
 	base
@@ -13,9 +13,7 @@ class Formatter {
 		const lightness = 0.7
 		const chroma = 0.1
 		this.base = this.#createChalkColor(new Color("oklch", [0.7, 0.1, hue]))
-		this.dim = this.#createChalkColor(
-			new Color("oklch", [lightness * 0.4, chroma * 0.8, hue]),
-		)
+		this.dim = this.#createChalkColor(new Color("oklch", [lightness * 0.4, chroma * 0.8, hue]))
 		this.highlight = this.#createChalkColor(
 			new Color("oklch", [lightness * 1.15, chroma, hue]),
 		).bold
@@ -23,11 +21,7 @@ class Formatter {
 
 	#createChalkColor(color: Color) {
 		const { r, g, b } = color.toGamut("srgb").srgb
-		return chalk.rgb(
-			Math.round(r * 255),
-			Math.round(g * 255),
-			Math.round(b * 255),
-		)
+		return chalk.rgb(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255))
 	}
 }
 
@@ -46,10 +40,7 @@ function defineLogFunction(
 	const formatter = new Formatter(hue)
 
 	function log(message: string | ((f: Formatter) => string)) {
-		writeText(
-			formatter.dim(prefix),
-			formatter.base(callOptionalFunction(message, formatter)),
-		)
+		writeText(formatter.dim(prefix), formatter.base(callOptionalFunction(message, formatter)))
 	}
 	log.formatters = formatter
 

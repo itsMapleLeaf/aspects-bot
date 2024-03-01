@@ -1,5 +1,5 @@
 import type { AutocompleteInteraction } from "discord.js"
-import { db } from "../db.ts"
+import { db } from "../db.js"
 
 export async function autocompleteCharacter(interaction: AutocompleteInteraction) {
 	if (!interaction.inGuild()) {

@@ -1,13 +1,13 @@
 import { ButtonStyle, type BaseMessageOptions } from "discord.js"
-import { CharacterModel } from "../characters/CharacterModel.ts"
-import { db } from "../db.ts"
-import { buttonRow, useButton } from "../discord/messageComponents/useButton.ts"
-import { useStringSelect } from "../discord/messageComponents/useStringSelect.ts"
-import { Attributes } from "../game/tables.ts"
-import { exclude, map, take } from "../helpers/iterable.ts"
-import { Logger } from "../logger.ts"
-import { CombatStateModel } from "./CombatStateModel.ts"
-import { useCombatTracker } from "./useCombatTracker.ts"
+import { CharacterModel } from "../characters/CharacterModel.js"
+import { db } from "../db.js"
+import { buttonRow, useButton } from "../discord/messageComponents/useButton.js"
+import { useStringSelect } from "../discord/messageComponents/useStringSelect.js"
+import { Attributes } from "../game/tables.js"
+import { exclude, map, take } from "../helpers/iterable.js"
+import { Logger } from "../logger.js"
+import { CombatStateModel } from "./CombatStateModel.js"
+import { useCombatTracker } from "./useCombatTracker.js"
 
 const defaultInitiativeAttributeId = "Mobility"
 
@@ -150,7 +150,7 @@ function parseAttributeId(
 		return defaultInitiativeAttributeId
 	}
 
-	if (!Attributes.isKey(selectedAttributeId)) {
+	if (!Attributes.hasKey(selectedAttributeId)) {
 		Logger.warn(`Invalid initiative attribute selected: ${selectedAttributeId}. Using default.`)
 		return defaultInitiativeAttributeId
 	}

@@ -2,12 +2,12 @@ import type { Character, Prisma } from "@prisma/client"
 import * as Discord from "discord.js"
 import { kebabCase } from "lodash-es"
 import { dedent } from "ts-dedent"
-import { db } from "../db.ts"
-import * as GameTables from "../game/tables.ts"
-import { Attributes } from "../game/tables.ts"
-import { join, recordFromEntries } from "../helpers/iterable.ts"
-import { clamp } from "../helpers/math.ts"
-import type { Nullish } from "../types.ts"
+import { db } from "../db.js"
+import * as GameTables from "../game/tables.js"
+import { Attributes } from "../game/tables.js"
+import { join, recordFromEntries } from "../helpers/iterable.js"
+import { clamp } from "../helpers/math.js"
+import type { Nullish } from "../types.js"
 
 export type CharacterModelData = Character & {
 	player: { id: string } | null
@@ -153,6 +153,10 @@ export class CharacterModel {
 	async update(newData: Partial<CharacterModelData>) {
 		const newModel = new CharacterModel({ ...this.data, ...newData })
 		return await newModel.save()
+	}
+
+	async delete() {
+		await db.character.delete({ where: { id: this.data.id } })
 	}
 
 	format() {

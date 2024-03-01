@@ -1,6 +1,6 @@
 import assert from "node:assert"
 import test from "node:test"
-import { take } from "./iterable.ts"
+import { take } from "./iterable.js"
 
 void test("take", () => {
 	const items = new Set(["a", "b", "c", "d", "e"])

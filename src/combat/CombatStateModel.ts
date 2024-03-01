@@ -1,8 +1,8 @@
 import type { CombatMember, CombatState, Prisma } from "@prisma/client"
-import { CharacterModel, type CharacterModelData } from "../characters/CharacterModel.ts"
-import { db } from "../db.ts"
-import { roll } from "../dice/roll.ts"
-import { Attributes } from "../game/tables.ts"
+import { CharacterModel, type CharacterModelData } from "../characters/CharacterModel.js"
+import { db } from "../db.js"
+import { roll } from "../dice/roll.js"
+import { Attributes } from "../game/tables.js"
 
 type AttributeId = keyof (typeof Attributes)["items"]
 
@@ -75,7 +75,7 @@ export class CombatStateModel {
 	}
 
 	get initiativeAttributeId() {
-		return Attributes.isKey(this.data.initiativeAttributeId)
+		return Attributes.hasKey(this.data.initiativeAttributeId)
 			? this.data.initiativeAttributeId
 			: "Mobility"
 	}

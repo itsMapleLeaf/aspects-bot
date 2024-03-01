@@ -1,6 +1,6 @@
 import * as Discord from "discord.js"
-import type { StrictOmit } from "../../types.ts"
-import { messageComponentStore } from "./MessageComponentStore.ts"
+import type { StrictOmit } from "../../types.js"
+import { messageComponentStore } from "./MessageComponentStore.js"
 
 export function useStringSelect(args: {
 	customId: string
@@ -13,18 +13,13 @@ export function useStringSelect(args: {
 
 	return {
 		render(
-			data: StrictOmit<
-				Discord.StringSelectMenuComponentData,
-				"type" | "customId"
-			>,
+			data: StrictOmit<Discord.StringSelectMenuComponentData, "type" | "customId">,
 		): Discord.ActionRowData<Discord.StringSelectMenuComponentData> {
 			const { onSelect, ...baseData } = args
 			const options = data.options.slice(0, 25)
 
 			const clampValueOption = (value: number | undefined) =>
-				value === undefined
-					? undefined
-					: Math.max(0, Math.min(25, options.length, value))
+				value === undefined ? undefined : Math.max(0, Math.min(25, options.length, value))
 
 			return {
 				type: Discord.ComponentType.ActionRow,

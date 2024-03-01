@@ -1,4 +1,4 @@
-import { GameTable } from "./GameTable.ts"
+import { GameTable } from "./GameTable.js"
 
 export const ActionDice = new GameTable({
 	d4: 4,

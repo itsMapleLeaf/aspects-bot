@@ -1,5 +1,5 @@
 import type { ApplicationCommandOptionChoiceData } from "discord.js"
-import { map } from "../../helpers/iterable.ts"
+import { map } from "../../helpers/iterable.js"
 
 export function toChoices<T extends string | number>(
 	items: Iterable<T>,

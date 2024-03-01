@@ -1,7 +1,7 @@
 import type { ApplicationCommandOptionChoiceData } from "discord.js"
-import { toChoices } from "../discord/commands/toChoices.ts"
-import { expect } from "../helpers/expect.ts"
-import { randomItem } from "../helpers/random.ts"
+import { toChoices } from "../discord/commands/toChoices.js"
+import { expect } from "../helpers/expect.js"
+import { randomItem } from "../helpers/random.js"
 
 export class GameTable<const Key extends string, const Value> {
 	readonly items: Readonly<Record<Key, Value>>
@@ -40,7 +40,7 @@ export class GameTable<const Key extends string, const Value> {
 		return expect(this.items[key as Key], `No item with key "${key}"`)
 	}
 
-	isKey(key: string): key is Key {
+	hasKey(key: string): key is Key {
 		return key in this.items
 	}
 }

@@ -1,6 +1,6 @@
 import * as Discord from "discord.js"
-import type { StrictOmit } from "../../types.ts"
-import { messageComponentStore } from "./MessageComponentStore.ts"
+import type { StrictOmit } from "../../types.js"
+import { messageComponentStore } from "./MessageComponentStore.js"
 
 export function useButton(args: {
 	customId: string
@@ -13,10 +13,7 @@ export function useButton(args: {
 
 	return {
 		render(
-			overrides: StrictOmit<
-				Discord.InteractionButtonComponentData,
-				"type" | "customId"
-			>,
+			overrides: StrictOmit<Discord.InteractionButtonComponentData, "type" | "customId">,
 		): Discord.InteractionButtonComponentData {
 			const { onClick, ...defaults } = args
 			return { ...defaults, ...overrides, type: Discord.ComponentType.Button }
@@ -24,8 +21,7 @@ export function useButton(args: {
 	}
 }
 
-export interface ButtonComponentArray
-	extends Array<Discord.ButtonComponentData> {
+export interface ButtonComponentArray extends Array<Discord.ButtonComponentData> {
 	length: 1 | 2 | 3 | 4 | 5
 }
 

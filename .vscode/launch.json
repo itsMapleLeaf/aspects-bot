@@ -9,9 +9,10 @@
 			"request": "launch",
 			"type": "node",
 			"runtimeExecutable": "pnpm",
-			"runtimeArgs": ["run-script", "dev"],
+			"runtimeArgs": ["run", "dev:node"],
 			"skipFiles": ["<node_internals>/**"],
-			"console": "integratedTerminal"
+			"console": "integratedTerminal",
+			"preLaunchTask": "tsc watch"
 		}
 	]
 }

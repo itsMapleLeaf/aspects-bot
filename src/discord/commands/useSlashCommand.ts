@@ -1,6 +1,6 @@
 import * as Discord from "discord.js"
-import type { Override, Simplify, StrictOmit } from "../../types.ts"
-import { commandStore, type CommandReply, type SlashCommand } from "./CommandStore.ts"
+import type { Override, Simplify, StrictOmit } from "../../types.js"
+import { commandStore, type CommandReply, type SlashCommand } from "./CommandStore.js"
 
 export function useSlashCommand<Options extends OptionRecord>(args: SlashCommandArgs<Options>) {
 	return commandStore.addCommand(defineSlashCommand<Options>(args))

@@ -1,9 +1,9 @@
-import { CharacterModel } from "../characters/CharacterModel.ts"
-import { autocompleteCharacter } from "../characters/autocompleteCharacter.ts"
-import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
-import { useGuildSlashCommand } from "../discord/commands/useGuildSlashCommand.ts"
-import { ActionDice, Attributes, Dice } from "../game/tables.ts"
-import { roll } from "./roll.ts"
+import { CharacterModel } from "../characters/CharacterModel.js"
+import { autocompleteCharacter } from "../characters/autocompleteCharacter.js"
+import { InteractionResponse } from "../discord/commands/InteractionResponse.js"
+import { useGuildSlashCommand } from "../discord/commands/useGuildSlashCommand.js"
+import { ActionDice, Attributes, Dice } from "../game/tables.js"
+import { roll } from "./roll.js"
 
 const modifyChoices = [
 	{ name: "eased", value: "eased" },
@@ -42,7 +42,7 @@ export function useRollCommands() {
 			const fatigue = options.fatigue ?? character?.data.fatigue
 
 			let actionDie: number
-			if (Attributes.isKey(options.die)) {
+			if (Attributes.hasKey(options.die)) {
 				if (!character) {
 					throw new InteractionResponse(
 						"You must have or specify a character to roll an attribute die.",

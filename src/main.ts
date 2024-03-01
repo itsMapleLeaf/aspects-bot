@@ -1,18 +1,18 @@
 import * as Discord from "discord.js"
-import { useCharacterCommands } from "./characters/useCharacterCommands.ts"
-import { useCombatCommands } from "./combat/useCombatCommands.ts"
-import { useRollCommands } from "./dice/useRollCommands.ts"
-import { commandStore } from "./discord/commands/CommandStore.ts"
-import { messageComponentStore } from "./discord/messageComponents/MessageComponentStore.ts"
-import { env } from "./env.ts"
-import { Logger } from "./logger.ts"
+import { useCharacterCommands } from "./characters/useCharacterCommands.js"
+import { useCombatCommands } from "./combat/useCombatCommands.js"
+import { useRollCommands } from "./dice/useRollCommands.js"
+import { commandStore } from "./discord/commands/CommandStore.js"
+import { messageComponentStore } from "./discord/messageComponents/MessageComponentStore.js"
+import { env } from "./env.js"
+import { Logger } from "./logger.js"
 
 const client = new Discord.Client({
 	intents: [Discord.GatewayIntentBits.Guilds, Discord.GatewayIntentBits.GuildMembers],
 })
 
 client.on("ready", (client) => {
-	Logger.info((f) => `Logged in as ${f.highlight(client.user?.tag)}`)
+	Logger.info((f) => `Logged in as ${f.highlight(client.user?.tag)} 💖`)
 })
 
 useRollCommands()

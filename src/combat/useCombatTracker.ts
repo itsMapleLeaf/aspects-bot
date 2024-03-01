@@ -1,10 +1,10 @@
 import * as Discord from "discord.js"
 import { dedent } from "ts-dedent"
-import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
-import { buttonRow, useButton } from "../discord/messageComponents/useButton.ts"
-import { raise } from "../helpers/errors.ts"
-import { joinTruthy } from "../helpers/string.ts"
-import { CombatStateModel } from "./CombatStateModel.ts"
+import { InteractionResponse } from "../discord/commands/InteractionResponse.js"
+import { buttonRow, useButton } from "../discord/messageComponents/useButton.js"
+import { raise } from "../helpers/errors.js"
+import { joinTruthy } from "../helpers/string.js"
+import { CombatStateModel } from "./CombatStateModel.js"
 
 export function useCombatTracker() {
 	const advanceButton = useButton({

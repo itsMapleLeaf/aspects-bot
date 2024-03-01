@@ -1,10 +1,15 @@
 import type * as Discord from "discord.js"
-import { CharacterModel } from "../../characters/CharacterModel.ts"
-import { isGameMaster } from "../../config.ts"
-import type { StrictOmit } from "../../types.ts"
-import type { CommandReply } from "./CommandStore.ts"
-import { InteractionResponse } from "./InteractionResponse.ts"
-import { type OptionRecord, type OptionValues, type SlashCommandArgs, useSlashCommand } from "./useSlashCommand.ts"
+import { CharacterModel } from "../../characters/CharacterModel.js"
+import { isGameMaster } from "../../config.js"
+import type { StrictOmit } from "../../types.js"
+import type { CommandReply } from "./CommandStore.js"
+import { InteractionResponse } from "./InteractionResponse.js"
+import {
+	useSlashCommand,
+	type OptionRecord,
+	type OptionValues,
+	type SlashCommandArgs,
+} from "./useSlashCommand.js"
 
 export type GuildSlashCommandArgs<Options extends OptionRecord> = StrictOmit<
 	SlashCommandArgs<Options>,

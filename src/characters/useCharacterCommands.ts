@@ -1,22 +1,22 @@
 import { inlineCode } from "discord.js"
-import { db } from "../db.ts"
-import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
-import { useGameMasterSlashCommand } from "../discord/commands/useGameMasterSlashCommand.ts"
-import { useGuildSlashCommand } from "../discord/commands/useGuildSlashCommand.ts"
+import { db } from "../db.js"
+import { InteractionResponse } from "../discord/commands/InteractionResponse.js"
+import { useGameMasterSlashCommand } from "../discord/commands/useGameMasterSlashCommand.js"
+import { useGuildSlashCommand } from "../discord/commands/useGuildSlashCommand.js"
 import type {
 	OptionRecord,
 	OptionValues,
 	optionTypes,
-} from "../discord/commands/useSlashCommand.ts"
-import { useStringSelect } from "../discord/messageComponents/useStringSelect.ts"
-import { Aspects, Attributes, Dice, Races } from "../game/tables.ts"
-import { isNonEmptyArray } from "../helpers/array.ts"
-import { exclude } from "../helpers/iterable.ts"
-import { randomItem } from "../helpers/random.ts"
-import type { Nullish } from "../types.ts"
-import { CharacterModel } from "./CharacterModel.ts"
-import { autocompleteCharacter } from "./autocompleteCharacter.ts"
-import { characterNames } from "./characterNames.ts"
+} from "../discord/commands/useSlashCommand.js"
+import { useStringSelect } from "../discord/messageComponents/useStringSelect.js"
+import { Aspects, Attributes, Dice, Races } from "../game/tables.js"
+import { isNonEmptyArray } from "../helpers/array.js"
+import { exclude } from "../helpers/iterable.js"
+import { randomItem } from "../helpers/random.js"
+import type { Nullish } from "../types.js"
+import { CharacterModel } from "./CharacterModel.js"
+import { autocompleteCharacter } from "./autocompleteCharacter.js"
+import { characterNames } from "./characterNames.js"
 
 export async function useCharacterCommands() {
 	//#region create
