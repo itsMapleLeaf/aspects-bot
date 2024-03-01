@@ -1,7 +1,3 @@
-import { loadGameData } from "./game-data.ts"
-import { Logger } from "./logger.ts"
-await Logger.async(`Loading game data`, loadGameData)
-
 import * as Discord from "discord.js"
 import { useCharacterCommands } from "./characters/useCharacterCommands.ts"
 import { useCombatCommands } from "./combat/useCombatCommands.ts"
@@ -9,6 +5,7 @@ import { useRollCommands } from "./dice/useRollCommands.ts"
 import { commandStore } from "./discord/commands/CommandStore.ts"
 import { messageComponentStore } from "./discord/messageComponents/MessageComponentStore.ts"
 import { env } from "./env.ts"
+import { Logger } from "./logger.ts"
 
 const client = new Discord.Client({
 	intents: [
