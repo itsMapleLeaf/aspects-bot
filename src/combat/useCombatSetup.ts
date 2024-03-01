@@ -1,4 +1,4 @@
-import { type BaseMessageOptions, ButtonStyle } from "discord.js"
+import { ButtonStyle, type BaseMessageOptions } from "discord.js"
 import { CharacterModel } from "../characters/CharacterModel.ts"
 import { db } from "../db.ts"
 import { buttonRow, useButton } from "../discord/messageComponents/useButton.ts"
@@ -55,6 +55,7 @@ export function useCombatSetup() {
 						id: { in: characterSelect.getSelectedValues(interaction.message) },
 						guildId: interaction.guildId,
 					},
+					include: { player: true },
 				})
 				.then((results) => results.map((data) => new CharacterModel(data)))
 

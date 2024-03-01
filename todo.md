@@ -20,7 +20,7 @@
     - when an attribute/aspect is selected, used the character argument if specified, or the player's character otherwise
   - [x] remove /action
 
-- [ ] improved character viewer UI, where you can select character profiles from a dropdown
+- [x] improved character viewer UI, where you can select character profiles from a dropdown
 - [ ] list most recently used characters first
 - [ ] character privacy
 - [ ] buttons to reroll with daunting/eased/normal

@@ -10,7 +10,7 @@ import { clamp } from "../helpers/math.ts"
 import type { Nullish } from "../types.ts"
 
 export type CharacterModelData = Character & {
-	player?: { id: string } | null
+	player: { id: string } | null
 }
 
 export class CharacterModel {

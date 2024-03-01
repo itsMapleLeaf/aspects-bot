@@ -1,5 +1,5 @@
-import type { Character, CombatMember, CombatState, Prisma } from "@prisma/client"
-import { CharacterModel } from "../characters/CharacterModel.ts"
+import type { CombatMember, CombatState, Prisma } from "@prisma/client"
+import { CharacterModel, type CharacterModelData } from "../characters/CharacterModel.ts"
 import { db } from "../db.ts"
 import { roll } from "../dice/roll.ts"
 import { Attributes } from "../game/tables.ts"
@@ -8,13 +8,17 @@ type AttributeId = keyof (typeof Attributes)["items"]
 
 export type CombatStateModelData = CombatState & {
 	initiativeAttributeId: string
-	members: (CombatMember & { character: Character })[]
+	members: (CombatMember & { character: CharacterModelData })[]
 }
 
 const queryInclude = {
 	members: {
 		include: {
-			character: true,
+			character: {
+				include: {
+					player: true,
+				},
+			},
 		},
 		orderBy: {
 			initiative: "desc" as const,

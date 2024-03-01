@@ -10,6 +10,7 @@ import type {
 } from "../discord/commands/useSlashCommand.ts"
 import { useStringSelect } from "../discord/messageComponents/useStringSelect.ts"
 import { Aspects, Attributes, Dice, Races } from "../game/tables.ts"
+import { isNonEmptyArray } from "../helpers/array.ts"
 import { exclude } from "../helpers/iterable.ts"
 import { randomItem } from "../helpers/random.ts"
 import type { Nullish } from "../types.ts"
@@ -115,9 +116,55 @@ export async function useCharacterCommands() {
 				return { content: character.format() }
 			}
 
-			return { content: "wip" }
+			return await renderCharacterViewer(guild.id)
 		},
 	})
+
+	// renders the character profile and a select to switch to another character
+	const characterViewerSelect = useStringSelect({
+		customId: "characterViewerSelect:character",
+		async onSelect(interaction) {
+			await interaction.update(
+				await renderCharacterViewer(interaction.guildId as string, interaction.values[0]),
+			)
+		},
+	})
+
+	async function renderCharacterViewer(guildId: string, characterId?: string) {
+		const characters = await db.character.findMany({
+			where: { guildId },
+			include: { player: true },
+		})
+		if (!isNonEmptyArray(characters)) {
+			return { content: "No characters found." }
+		}
+
+		const data = characterId ? characters.find((c) => c.id === characterId) : characters[0]
+		const selectOptions = characters.map((c) => ({
+			label: c.name,
+			value: c.id,
+			default: c.id === data?.id,
+		}))
+
+		if (!data) {
+			return {
+				content: "Character not found.",
+				components: [
+					characterViewerSelect.render({
+						options: selectOptions,
+						placeholder: "Select a character",
+					}),
+				],
+			}
+		}
+
+		return {
+			content: new CharacterModel(data).format(),
+			components: [
+				characterViewerSelect.render({ options: selectOptions, placeholder: "Select a character" }),
+			],
+		}
+	}
 	//#endregion
 
 	//#region update
@@ -357,6 +404,7 @@ function useCharacterUpdateCommand<Options extends OptionRecord>({
 			const characters = await db.character
 				.findMany({
 					where: { guildId: guild.id },
+					include: { player: true },
 				})
 				.then((characters) => characters.map((c) => new CharacterModel(c)))
 
@@ -407,6 +455,7 @@ function useCharacterUpdateCommand<Options extends OptionRecord>({
 			const characters = await db.character
 				.findMany({
 					where: { id: { in: interaction.values }, guildId: interaction.guildId },
+					include: { player: true },
 				})
 				.then((characters) => characters.map((c) => new CharacterModel(c)))
 
