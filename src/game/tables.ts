@@ -1,11 +1,21 @@
-export const ActionDiceTypes = [4, 6, 8, 12, 20]
-export const DiceTypes = [...ActionDiceTypes, 2, 10, 100]
+import { GameTable } from "./GameTable.ts"
 
-export type Race = {
-	emoji: string
-}
+export const ActionDice = new GameTable({
+	d4: 4,
+	d6: 6,
+	d8: 8,
+	d12: 12,
+	d20: 20,
+})
 
-export const Races: Record<string, Race> = {
+export const Dice = new GameTable({
+	...ActionDice.items,
+	d2: 2,
+	d10: 10,
+	d100: 100,
+})
+
+export const Races = new GameTable({
 	Aquilian: { emoji: "🕊️" },
 	Cetacian: { emoji: "🐳" },
 	Felirian: { emoji: "🐈" },
@@ -16,29 +26,21 @@ export const Races: Record<string, Race> = {
 	Renari: { emoji: "🦊" },
 	Sylvanix: { emoji: "🦌" },
 	Umbraleth: { emoji: "😈" },
-}
+} satisfies Record<string, { emoji: string }>)
 
-export type Aspect = {
-	emoji: string
-}
-
-export const Aspects: Record<string, Aspect> = {
+export const Aspects = new GameTable({
 	Fire: { emoji: "🔥" },
 	Water: { emoji: "💧" },
 	Wind: { emoji: "🍃" },
 	Light: { emoji: "☀️" },
 	Darkness: { emoji: "🌑" },
-}
+} satisfies Record<string, { emoji: string }>)
 
-export type Attribute = {
-	emoji: string
-}
-
-export const Attributes: Record<string, Attribute> = {
+export const Attributes = new GameTable({
 	Strength: { emoji: "💪" },
 	Sense: { emoji: "👁️" },
 	Mobility: { emoji: "🏃" },
 	Intellect: { emoji: "🧠" },
 	Wit: { emoji: "✨" },
 	Aspect: { emoji: "⚡" },
-}
+} satisfies Record<string, { emoji: string }>)

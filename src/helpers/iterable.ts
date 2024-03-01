@@ -1,4 +1,4 @@
-import { Falsy } from "../types.ts"
+import type { Falsy } from "../types.ts"
 
 export function* map<T, V>(iterable: Iterable<T>, mapper: (value: T) => V) {
 	for (const value of iterable) {
@@ -40,6 +40,18 @@ export function* fromGenerator<T>(generator: () => Iterable<T>) {
 
 export function arrayFromGenerator<T>(generator: () => Iterable<T>) {
 	return [...generator()]
+}
+
+export function recordFromEntries<
+	const Entry extends readonly [PropertyKey, unknown],
+>(entries: Iterable<Entry>) {
+	return Object.fromEntries(entries) as Record<Entry[0], Entry[1]>
+}
+
+export function objectFromGenerator<const K extends PropertyKey, const V>(
+	generator: () => Iterable<readonly [K, V]>,
+) {
+	return Object.fromEntries(generator()) as Record<K, V>
 }
 
 export function* take<T>(count: number, iterable: Iterable<T>) {

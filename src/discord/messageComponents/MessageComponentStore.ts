@@ -1,4 +1,4 @@
-import * as Discord from "discord.js"
+import type * as Discord from "discord.js"
 
 export const messageComponentStore = new (class MessageComponentContext {
 	#handlers = new Map<

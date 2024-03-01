@@ -1,4 +1,4 @@
-import { NonEmptyArray } from "../types.ts"
+import type { NonEmptyArray } from "../types.ts"
 
 export function randomInt(...args: [max: number] | [min: number, max: number]) {
 	const [min, max] = args.length === 1 ? [0, args[0]] : args

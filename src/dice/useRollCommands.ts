@@ -1,9 +1,6 @@
 import * as Discord from "discord.js"
-import {
-	findCharacterByPlayerId,
-	updateCharacter,
-} from "../characters/CharacterData.ts"
-import { db } from "../db.ts"
+import { autocompleteCharacter } from "../characters/autocompleteCharacter.ts"
+import { useGuildSlashCommand } from "../discord/commands/useGuildSlashCommand.ts"
 import { useSlashCommand } from "../discord/commands/useSlashCommand.ts"
 import { join, map, range } from "../helpers/iterable.ts"
 import { roll } from "./roll.ts"
@@ -42,18 +39,16 @@ export function useRollCommands() {
 		async run({ interaction, options }) {
 			const count = options.count ?? 1
 
-			const rolls = map(range(count), () =>
-				Discord.bold(`${roll(options.die)}`),
-			)
+			const rolls = map(range(count), () => Discord.bold(`${roll(options.die)}`))
 
-			await interaction.reply({
+			return {
 				content: `🎲 ${count}d${options.die} => ${join(rolls, ", ")}`,
 				ephemeral: options.private ?? false,
-			})
+			}
 		},
 	})
 
-	useSlashCommand({
+	useGuildSlashCommand({
 		name: "action",
 		description: "Make an action roll",
 
@@ -71,31 +66,13 @@ export function useRollCommands() {
 			fatigue: t.integer("Number of fatigue dice to roll"),
 			private: t.boolean("Hide this roll from everyone but yourself."),
 			character: t.string("The character to roll for", {
-				autocomplete: async (input) => {
-					const results = await db.character.findMany({
-						...(input && {
-							where: {
-								name: {
-									contains: input,
-								},
-							},
-						}),
-						orderBy: {
-							name: "asc",
-						},
-					})
-
-					return results.map((c) => ({
-						name: c.name,
-						value: c.id,
-					}))
-				},
+				autocomplete: autocompleteCharacter,
 			}),
 		}),
 
-		async run({ interaction, options }) {
-			const character = await findCharacterByPlayerId(interaction.user.id)
-			const fatigue = options.fatigue ?? character?.fatigue
+		async run({ interaction, options, getInteractingUserCharacter }) {
+			const character = await getInteractingUserCharacter()
+			const fatigue = options.fatigue ?? character?.data.fatigue
 
 			const firstActionDie = roll(options.die)
 			let secondActionDie
@@ -140,14 +117,10 @@ export function useRollCommands() {
 			if (fatigueDamage > 0) {
 				valueLines.push(`💔 Fatigue Damage: **${fatigueDamage}**`)
 				if (character) {
-					const previousHealth = character.health
-					await updateCharacter({
-						id: character.id,
-						health: Math.max(0, previousHealth - fatigueDamage),
+					const updated = await character.update({
+						health: Math.max(0, character.health - fatigueDamage),
 					})
-					valueLines.push(
-						`❤️‍🩹 Health: **${previousHealth}** -> **${character.health}**`,
-					)
+					valueLines.push(`❤️‍🩹 Health: **${character.health}** -> **${updated.health}**`)
 				}
 			}
 
@@ -159,9 +132,7 @@ export function useRollCommands() {
 			diceLines.push(`⚡ Action Dice: ${actionDiceList}`)
 
 			if (options.difficulty) {
-				diceLines.push(
-					`💢 Difficulty Die: 1d${options.difficulty} -> **${difficultyResult}**`,
-				)
+				diceLines.push(`💢 Difficulty Die: 1d${options.difficulty} -> **${difficultyResult}**`)
 			}
 
 			if (fatigueResults) {
@@ -171,10 +142,10 @@ export function useRollCommands() {
 				diceLines.push(`💤 Fatigue Dice: ${fatigue}d6 -> ${fatigueDieList}`)
 			}
 
-			await interaction.reply({
+			return {
 				content: [`## ${title}`, ...valueLines, "", ...diceLines].join("\n"),
 				ephemeral: options.private ?? false,
-			})
+			}
 		},
 	})
 

@@ -21,5 +21,7 @@ export default tseslint.config({
 		"@typescript-eslint/no-unnecessary-type-assertion": "error",
 		"@typescript-eslint/no-inferrable-types": "error",
 		"@typescript-eslint/no-redundant-type-constituents": "error",
+		"@typescript-eslint/consistent-type-imports": ["error", { fixStyle: "inline-type-imports" }],
+		"@typescript-eslint/no-import-type-side-effects": "error",
 	},
 })

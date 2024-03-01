@@ -1,5 +1,5 @@
 import * as Discord from "discord.js"
-import { StrictOmit } from "../../types.ts"
+import type { StrictOmit } from "../../types.ts"
 import { messageComponentStore } from "./MessageComponentStore.ts"
 
 export function useStringSelect(args: {

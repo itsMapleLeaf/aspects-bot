@@ -1,19 +1,10 @@
 import * as Discord from "discord.js"
 import { dedent } from "ts-dedent"
-import { getAttributeDice, getMaxHealth } from "../characters/CharacterData.ts"
-import { db } from "../db.ts"
 import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
 import { buttonRow, useButton } from "../discord/messageComponents/useButton.ts"
 import { raise } from "../helpers/errors.ts"
-import { expectSoft } from "../helpers/expect.ts"
 import { joinTruthy } from "../helpers/string.ts"
-import {
-	CombatStateData,
-	advanceCombat,
-	endCombat,
-	getCombatState,
-	rewindCombat,
-} from "./CombatState.ts"
+import { CombatStateModel } from "./CombatStateModel.ts"
 
 export function useCombatTracker() {
 	const advanceButton = useButton({
@@ -21,17 +12,13 @@ export function useCombatTracker() {
 		async onClick(interaction) {
 			const guild =
 				interaction.guild ??
-				raise(
-					new InteractionResponse(
-						"Sorry, this command can only be used in a server.",
-					),
-				)
+				raise(new InteractionResponse("Sorry, this command can only be used in a server."))
 
 			const state =
-				(await getCombatState(guild)) ??
+				(await CombatStateModel.get(guild.id)) ??
 				raise(new InteractionResponse("Combat isn't running!"))
 
-			await interaction.update(await render(await advanceCombat(state)))
+			await interaction.update(await render(await state.advance()))
 		},
 	})
 
@@ -40,17 +27,13 @@ export function useCombatTracker() {
 		async onClick(interaction) {
 			const guild =
 				interaction.guild ??
-				raise(
-					new InteractionResponse(
-						"Sorry, this command can only be used in a server.",
-					),
-				)
+				raise(new InteractionResponse("Sorry, this command can only be used in a server."))
 
 			const state =
-				(await getCombatState(guild)) ??
+				(await CombatStateModel.get(guild.id)) ??
 				raise(new InteractionResponse("Combat isn't running!"))
 
-			await interaction.update(await render(await rewindCombat(state)))
+			await interaction.update(await render(await state.rewind()))
 		},
 	})
 
@@ -59,13 +42,9 @@ export function useCombatTracker() {
 		async onClick(interaction) {
 			const guild =
 				interaction.guild ??
-				raise(
-					new InteractionResponse(
-						"Sorry, this command can only be used in a server.",
-					),
-				)
+				raise(new InteractionResponse("Sorry, this command can only be used in a server."))
 
-			await endCombat(guild)
+			await CombatStateModel.delete(guild.id)
 
 			const response = await interaction.update({
 				content: "Combat has ended.",
@@ -78,22 +57,14 @@ export function useCombatTracker() {
 		},
 	})
 
-	async function render(
-		state: CombatStateData | undefined,
-	): Promise<Discord.BaseMessageOptions> {
+	async function render(state: CombatStateModel | undefined): Promise<Discord.BaseMessageOptions> {
 		if (!state) {
 			return {
 				content: "Combat is inactive. Run `/combat start` to begin combat.",
 			}
 		}
 
-		const currentParticipant =
-			expectSoft(
-				state.members[state.participantIndex],
-				`No participant at index ${state.participantIndex}. Using the first participant instead.`,
-			) ?? state.members[0]
-
-		if (!currentParticipant) {
+		if (!state.currentMember) {
 			return {
 				content: dedent`
 					Huh, that's weird. It doesn't look like there are any combat participants.
@@ -102,36 +73,29 @@ export function useCombatTracker() {
 			}
 		}
 
-		const currentCharacterName = Discord.bold(currentParticipant.character.name)
+		const currentCharacterName = Discord.bold(state.currentMember.character.data.name)
 
-		const currentPlayerPing = currentParticipant.character.player?.discordUserId
-			? Discord.userMention(currentParticipant.character.player?.discordUserId)
+		const currentPlayerPing = state.currentMember.character.data.player?.id
+			? Discord.userMention(state.currentMember.character.data.player.id)
 			: ""
 
-		const attributes = await db.attribute.findMany()
-
-		const descriptionParts = state.members.map((member, index) => {
-			const attributeDice = getAttributeDice(member.character, attributes)
-
-			let name = member.character.name
-			if (state.participantIndex === index) {
+		const descriptionParts = state.members.map((member) => {
+			let name = member.character.data.name
+			if (state.currentMember === member) {
 				name = Discord.bold(name)
 			}
 
-			const attributeDie = attributeDice.get(state.initiativeAttributeId)
+			const attributeDie = member.character.attributes[state.initiativeAttributeId]
 
 			const initiative = joinTruthy(" ⇒ ", [
-				attributeDie && `d${attributeDie.die}`,
+				attributeDie && `d${attributeDie}`,
 				Discord.bold(String(member.initiative)),
 			])
 
-			const maxHealth = getMaxHealth(attributeDice)
-			const health = Discord.bold(`${member.character.health}/${maxHealth}`)
+			const health = Discord.bold(`${member.character.health}/${member.character.maxHealth}`)
 
-			const fatigue = Discord.bold(member.character.fatigue.toString())
-			const aspectName = Discord.bold(
-				member.character.aspectAttribute.aspectName,
-			)
+			const fatigue = Discord.bold(`${member.character.data.fatigue}`)
+			const aspectName = Discord.bold(`${member.character.data.aspectId}`)
 
 			return dedent`
 				${member.character.race.emoji} ${name} (${initiative})
@@ -139,8 +103,8 @@ export function useCombatTracker() {
 			`
 		})
 
-		const round = Discord.bold(String(state.round))
-		const initiativeAttributeName = Discord.bold(state.initiativeAttribute.name)
+		const round = Discord.bold(String(state.data.round))
+		const initiativeAttributeName = Discord.bold(state.initiativeAttributeId)
 
 		return {
 			content: `${currentCharacterName}, you're up! ${currentPlayerPing}`,

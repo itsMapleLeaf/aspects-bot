@@ -1,4 +1,4 @@
-import { GuildMember, PermissionFlagsBits } from "discord.js"
+import { type GuildMember, PermissionFlagsBits } from "discord.js"
 
 export function isGameMaster(member: GuildMember) {
 	return (

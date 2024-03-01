@@ -1,15 +1,15 @@
-import { BaseMessageOptions, ButtonStyle } from "discord.js"
-import { getAttributeDice } from "../characters/CharacterData.ts"
+import { type BaseMessageOptions, ButtonStyle } from "discord.js"
+import { CharacterModel } from "../characters/CharacterModel.ts"
 import { db } from "../db.ts"
-import { roll } from "../dice/roll.ts"
 import { buttonRow, useButton } from "../discord/messageComponents/useButton.ts"
 import { useStringSelect } from "../discord/messageComponents/useStringSelect.ts"
-import { expectSoft } from "../helpers/expect.ts"
+import { Attributes } from "../game/tables.ts"
 import { exclude, map, take } from "../helpers/iterable.ts"
-import { startCombat } from "./CombatState.ts"
+import { Logger } from "../logger.ts"
+import { CombatStateModel } from "./CombatStateModel.ts"
 import { useCombatTracker } from "./useCombatTracker.ts"
 
-const defaultInitiativeAttributeId = "mobility"
+const defaultInitiativeAttributeId = "Mobility"
 
 export function useCombatSetup() {
 	const characterSelect = useStringSelect({
@@ -49,43 +49,28 @@ export function useCombatSetup() {
 				return
 			}
 
-			const characterIds = characterSelect.getSelectedValues(
-				interaction.message,
+			const characters = await db.character
+				.findMany({
+					where: {
+						id: { in: characterSelect.getSelectedValues(interaction.message) },
+						guildId: interaction.guildId,
+					},
+				})
+				.then((results) => results.map((data) => new CharacterModel(data)))
+
+			const initiativeAttributeId = parseAttributeId(
+				initiativeAttributeSelect.getSelectedValues(interaction.message)[0],
 			)
 
-			const initiativeAttributeId =
-				expectSoft(
-					initiativeAttributeSelect.getSelectedValues(interaction.message)[0],
-					"No initiative attribute selected. Using default.",
-				) ?? defaultInitiativeAttributeId
-
-			const characters = await db.character.findMany({
-				where: { id: { in: characterIds } },
-				include: { aspectAttribute: true },
-			})
-
-			const attributes = await db.attribute.findMany()
-
-			const state = await startCombat({
-				guild: { id: interaction.guildId },
-				members: characters.map((character) => {
-					const attributeDice = getAttributeDice(character, attributes)
-
-					const initiativeDie =
-						expectSoft(
-							attributeDice.get(initiativeAttributeId),
-							`Character "${character.name}" does not have attribute "${initiativeAttributeId}". Using default.`,
-						)?.die ?? 4
-
-					return {
-						characterId: character.id,
-						initiative: roll(initiativeDie),
-					}
-				}),
-				initiativeAttributeId,
-			})
-
-			await interaction.update(await combatTracker.render(state))
+			await interaction.update(
+				await combatTracker.render(
+					await CombatStateModel.create({
+						guildId: interaction.guildId,
+						initiativeAttributeId,
+						memberCharacters: characters,
+					}),
+				),
+			)
 		},
 	})
 
@@ -102,8 +87,6 @@ export function useCombatSetup() {
 				player: true,
 			},
 		})
-
-		const attributes = await db.attribute.findMany()
 
 		const selectedCharacterIds = new Set(
 			args.characterIds ?? characters.filter((c) => c.player).map((c) => c.id),
@@ -138,12 +121,10 @@ export function useCombatSetup() {
 					placeholder: "Select initiative attribute",
 					minValues: 1,
 					maxValues: 1,
-					options: attributes.map((a) => ({
-						label: a.name,
-						value: a.id,
-						default:
-							a.id ===
-							(args.initiativeAttributeId ?? defaultInitiativeAttributeId),
+					options: [...Attributes.keys()].map((name) => ({
+						label: name,
+						value: name,
+						default: name === (args.initiativeAttributeId ?? defaultInitiativeAttributeId),
 					})),
 				}),
 				buttonRow([
@@ -158,4 +139,20 @@ export function useCombatSetup() {
 	}
 
 	return { render }
+}
+
+function parseAttributeId(
+	selectedAttributeId: string | undefined,
+): keyof (typeof Attributes)["items"] {
+	if (selectedAttributeId === undefined) {
+		Logger.warn("No initiative attribute selected. Using default.")
+		return defaultInitiativeAttributeId
+	}
+
+	if (!Attributes.isKey(selectedAttributeId)) {
+		Logger.warn(`Invalid initiative attribute selected: ${selectedAttributeId}. Using default.`)
+		return defaultInitiativeAttributeId
+	}
+
+	return selectedAttributeId
 }

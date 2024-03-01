@@ -1,12 +1,18 @@
+import type { AutocompleteInteraction } from "discord.js"
 import { db } from "../db.ts"
 
-export async function autocompleteCharacter(input: string) {
+export async function autocompleteCharacter(interaction: AutocompleteInteraction) {
+	if (!interaction.inGuild()) {
+		return []
+	}
+
+	const input = interaction.options.getFocused(true).value
+
 	const results = await db.character.findMany({
 		...(input && {
 			where: {
-				name: {
-					contains: input,
-				},
+				guildId: interaction.guildId,
+				name: { contains: input },
 			},
 		}),
 		orderBy: { name: "asc" },

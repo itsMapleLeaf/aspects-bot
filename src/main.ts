@@ -8,10 +8,7 @@ import { env } from "./env.ts"
 import { Logger } from "./logger.ts"
 
 const client = new Discord.Client({
-	intents: [
-		Discord.GatewayIntentBits.Guilds,
-		Discord.GatewayIntentBits.GuildMembers,
-	],
+	intents: [Discord.GatewayIntentBits.Guilds, Discord.GatewayIntentBits.GuildMembers],
 })
 
 client.on("ready", (client) => {
@@ -20,7 +17,6 @@ client.on("ready", (client) => {
 
 useRollCommands()
 await useCharacterCommands()
-// useHealCommands()
 useCombatCommands()
 
 commandStore.addListeners(client)

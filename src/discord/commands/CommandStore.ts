@@ -6,13 +6,17 @@ import { InteractionResponse } from "./InteractionResponse.ts"
 
 export type SlashCommand = {
 	data: Discord.ApplicationCommandData
-	run(interaction: Discord.ChatInputCommandInteraction): Promise<void>
+	run(interaction: Discord.ChatInputCommandInteraction): Promise<CommandReply>
 }
 
+export type CommandReply = Discord.InteractionReplyOptions | string
+
+export type AutocompleteFn = (
+	interaction: Discord.AutocompleteInteraction,
+) => Promise<Discord.ApplicationCommandOptionChoiceData[]>
+
 export type Autocompletion = {
-	autocomplete(
-		value: string,
-	): Promise<Discord.ApplicationCommandOptionChoiceData[]>
+	autocomplete: AutocompleteFn
 }
 
 type CommandName = string
@@ -22,12 +26,14 @@ export const commandStore = new (class CommandStore {
 	#commands = new Map<CommandName, SlashCommand>()
 	#autocompletions = new Map<`${CommandName}:${OptionName}`, Autocompletion>()
 
-	async runCommand(
-		command: SlashCommand,
-		interaction: Discord.ChatInputCommandInteraction,
-	) {
+	async runCommand(command: SlashCommand, interaction: Discord.ChatInputCommandInteraction) {
 		try {
-			await command.run(interaction)
+			const reply = await command.run(interaction)
+			await interaction.reply({
+				ephemeral: true,
+				allowedMentions: { users: [], roles: [], repliedUser: false },
+				...(typeof reply === "string" ? { content: reply } : reply),
+			})
 		} catch (error) {
 			if (error instanceof InteractionResponse) {
 				await addInteractionReply(interaction, {
@@ -59,10 +65,7 @@ export const commandStore = new (class CommandStore {
 			const data = () => map(this.#commands.values(), (command) => command.data)
 
 			Logger.info((f) => {
-				const names = map(
-					expandCommandNames(data()),
-					(name) => `/${f.highlight(name)}`,
-				)
+				const names = map(expandCommandNames(data()), (name) => `/${f.highlight(name)}`)
 				return `Using commands: ${join(names, ", ")}`
 			})
 
@@ -96,10 +99,7 @@ export const commandStore = new (class CommandStore {
 				if (!autocompletion) {
 					Logger.error((f) => {
 						const available = join(
-							map(
-								this.#autocompletions.keys(),
-								(key) => "- " + f.highlight(key),
-							),
+							map(this.#autocompletions.keys(), (key) => "- " + f.highlight(key)),
 							"\n",
 						)
 						return `No autocompletion for ${key}. Available completions:\n${available}`
@@ -113,12 +113,10 @@ export const commandStore = new (class CommandStore {
 							`Running autocompletion for /${f.highlight(getCommandName(interaction))} [${f.highlight(focused.name)}]`,
 						),
 					async () => {
-						const choices = await autocompletion.autocomplete(focused.value)
+						const choices = await autocompletion.autocomplete(interaction)
 						const clamped = choices.slice(0, 25)
 						if (clamped.length > choices.length) {
-							Logger.warn(
-								`Clamped ${choices.length} autocompletions to 25 for ${key}`,
-							)
+							Logger.warn(`Clamped ${choices.length} autocompletions to 25 for ${key}`)
 						}
 						await interaction.respond(clamped)
 					},
@@ -129,24 +127,17 @@ export const commandStore = new (class CommandStore {
 })()
 
 function getCommandName(
-	interaction:
-		| Discord.ChatInputCommandInteraction
-		| Discord.AutocompleteInteraction,
+	interaction: Discord.ChatInputCommandInteraction | Discord.AutocompleteInteraction,
 ) {
 	const subgroup = interaction.options.getSubcommandGroup(false)
 	const subcommand = interaction.options.getSubcommand(false)
-	const name = [interaction.commandName, subgroup, subcommand]
-		.filter(Boolean)
-		.join(" ")
+	const name = [interaction.commandName, subgroup, subcommand].filter(Boolean).join(" ")
 	return name
 }
 
 function* expandCommandNames(data: Iterable<Discord.ApplicationCommandData>) {
 	for (const entry of data) {
-		if (
-			entry.type !== Discord.ApplicationCommandType.ChatInput &&
-			entry.type !== undefined
-		) {
+		if (entry.type !== Discord.ApplicationCommandType.ChatInput && entry.type !== undefined) {
 			yield entry.name
 			continue
 		}
@@ -179,8 +170,6 @@ async function addInteractionReply(
 			await interaction.reply(options)
 		}
 	} catch (error) {
-		Logger.error(
-			`Failed to reply to interaction. ${inspect(error, { depth: 10 })}`,
-		)
+		Logger.error(`Failed to reply to interaction. ${inspect(error, { depth: 10 })}`)
 	}
 }

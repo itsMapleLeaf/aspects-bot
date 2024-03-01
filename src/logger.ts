@@ -2,7 +2,7 @@ import chalk from "chalk"
 import Color from "colorjs.io"
 import prettyMilliseconds from "pretty-ms"
 import { inspect } from "util"
-import { Awaitable } from "./types.ts"
+import type { Awaitable } from "./types.ts"
 
 class Formatter {
 	base

@@ -1,4 +1,4 @@
-import { NonEmptyArray } from "../types.ts"
+import type { NonEmptyArray } from "../types.ts"
 
 export const characterNames: NonEmptyArray<string> = [
 	// male

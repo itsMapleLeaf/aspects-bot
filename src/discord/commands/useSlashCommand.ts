@@ -1,10 +1,8 @@
 import * as Discord from "discord.js"
-import { Override, Simplify, StrictOmit } from "../../types.ts"
-import { SlashCommand, commandStore } from "./CommandStore.ts"
+import type { Override, Simplify, StrictOmit } from "../../types.ts"
+import { type CommandReply, type SlashCommand, commandStore } from "./CommandStore.ts"
 
-export function useSlashCommand<Options extends OptionRecord>(
-	args: SlashCommandArgs<Options>,
-) {
+export function useSlashCommand<Options extends OptionRecord>(args: SlashCommandArgs<Options>) {
 	return commandStore.addCommand(defineSlashCommand<Options>(args))
 }
 
@@ -16,7 +14,7 @@ export type SlashCommandArgs<Options extends OptionRecord> = Override<
 		run: (args: {
 			interaction: Discord.ChatInputCommandInteraction
 			options: OptionValues<Options>
-		}) => Promise<void>
+		}) => Promise<CommandReply>
 	}
 >
 
@@ -36,47 +34,38 @@ export function defineSlashCommand<Options extends OptionRecord>(
 	return {
 		data: {
 			...args,
-			options: Object.entries(options ?? {}).map(([name, option]) =>
-				option.data(name),
-			),
+			options: Object.entries(options ?? {}).map(([name, option]) => option.data(name)),
 		},
 		async run(interaction) {
-			if (interaction.isChatInputCommand()) {
-				const values: Record<string, unknown> = {}
-				for (const [name, option] of Object.entries(options ?? {})) {
-					values[name] = option.parse(interaction, name)
-				}
-				await args.run({
-					interaction,
-					options: values as OptionValues<Options>,
-				})
+			const values: Record<string, unknown> = {}
+			for (const [name, option] of Object.entries(options ?? {})) {
+				values[name] = option.parse(interaction, name)
 			}
+			return await args.run({
+				interaction,
+				options: values as OptionValues<Options>,
+			})
 		},
 	}
 }
 
 type Option = {
 	data: (name: string) => Discord.ApplicationCommandOptionData
-	parse: (
-		interaction: Discord.ChatInputCommandInteraction,
-		name: string,
-	) => unknown
+	parse: (interaction: Discord.ChatInputCommandInteraction, name: string) => unknown
 	autocomplete?: AutocompleteFn
 }
 
 export type OptionRecord = Record<string, Option>
 
-type OptionValues<Options extends Record<string, Option>> = Simplify<{
+export type OptionValues<Options extends Record<string, Option>> = Simplify<{
 	[K in keyof Options]: ReturnType<Options[K]["parse"]>
 }>
 
 type AutocompleteFn<T extends string | number = string | number> = (
-	input: string,
+	interaction: Discord.AutocompleteInteraction,
 ) => Promise<Discord.ApplicationCommandOptionChoiceData<T>[]>
 
-type RequiredType<Condition, T> = Condition extends true
-	? NonNullable<T>
-	: T | null
+type RequiredType<Condition, T> = Condition extends true ? NonNullable<T> : T | null
 
 const optionTypes = {
 	string<const Required extends boolean, const Value extends string>(
@@ -99,10 +88,7 @@ const optionTypes = {
 				autocomplete: !!data?.autocomplete,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getString(
-					name,
-					data?.required,
-				) as RequiredType<Required, Value>
+				return interaction.options.getString(name, data?.required) as RequiredType<Required, Value>
 			},
 			autocomplete: data?.autocomplete,
 		} satisfies Option
@@ -128,10 +114,7 @@ const optionTypes = {
 				autocomplete: !!data?.autocomplete,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getInteger(
-					name,
-					data?.required,
-				) as RequiredType<Required, Value>
+				return interaction.options.getInteger(name, data?.required) as RequiredType<Required, Value>
 			},
 			autocomplete: data?.autocomplete,
 		} satisfies Option
@@ -157,10 +140,7 @@ const optionTypes = {
 				autocomplete: !!data?.autocomplete,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getNumber(
-					name,
-					data?.required,
-				) as RequiredType<Required, Value>
+				return interaction.options.getNumber(name, data?.required) as RequiredType<Required, Value>
 			},
 			autocomplete: data?.autocomplete,
 		} satisfies Option
@@ -183,10 +163,10 @@ const optionTypes = {
 				description,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getBoolean(
-					name,
-					data?.required,
-				) as RequiredType<Required, boolean>
+				return interaction.options.getBoolean(name, data?.required) as RequiredType<
+					Required,
+					boolean
+				>
 			},
 		} satisfies Option
 	},
@@ -208,10 +188,10 @@ const optionTypes = {
 				description,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getUser(
-					name,
-					data?.required,
-				) as RequiredType<Required, Discord.User>
+				return interaction.options.getUser(name, data?.required) as RequiredType<
+					Required,
+					Discord.User
+				>
 			},
 		} satisfies Option
 	},
@@ -233,10 +213,10 @@ const optionTypes = {
 				description,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getChannel(
-					name,
-					data?.required,
-				) as RequiredType<Required, Discord.Channel>
+				return interaction.options.getChannel(name, data?.required) as RequiredType<
+					Required,
+					Discord.Channel
+				>
 			},
 		} satisfies Option
 	},
@@ -258,10 +238,10 @@ const optionTypes = {
 				description,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getRole(
-					name,
-					data?.required,
-				) as RequiredType<Required, Discord.Role>
+				return interaction.options.getRole(name, data?.required) as RequiredType<
+					Required,
+					Discord.Role
+				>
 			},
 		} satisfies Option
 	},
@@ -283,10 +263,7 @@ const optionTypes = {
 				description,
 			}),
 			parse(interaction, name) {
-				return interaction.options.getMentionable(
-					name,
-					data?.required,
-				) as RequiredType<
+				return interaction.options.getMentionable(name, data?.required) as RequiredType<
 					Required,
 					Discord.User | Discord.Channel | Discord.Role
 				>

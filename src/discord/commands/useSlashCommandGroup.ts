@@ -1,11 +1,7 @@
 import * as Discord from "discord.js"
 import { Logger } from "../../logger.ts"
-import { SlashCommand, commandStore } from "./CommandStore.ts"
-import {
-	OptionRecord,
-	SlashCommandArgs,
-	defineSlashCommand,
-} from "./useSlashCommand.ts"
+import { type SlashCommand, commandStore } from "./CommandStore.ts"
+import { type OptionRecord, type SlashCommandArgs, defineSlashCommand } from "./useSlashCommand.ts"
 
 type GroupHandle = {
 	add<Options extends OptionRecord>(args: SlashCommandArgs<Options>): void
@@ -29,12 +25,11 @@ export function useSlashCommandGroup(
 		run: async (interaction) => {
 			const command = commands.get(interaction.options.getSubcommand())
 			if (!command) {
-				Logger.error((f) => {
-					return `Command ${f.highlight(interaction.commandName)} has no subcommand ${f.highlight(interaction.options.getSubcommand())}`
-				})
-				return
+				throw new Error(
+					`Command ${interaction.commandName} has no subcommand ${interaction.options.getSubcommand()}`,
+				)
 			}
-			await command.run(interaction)
+			return await command.run(interaction)
 		},
 	})
 
@@ -44,21 +39,14 @@ export function useSlashCommandGroup(
 				command.data.type !== Discord.ApplicationCommandType.ChatInput &&
 				command.data.type !== undefined
 			) {
-				Logger.warn(
-					`Command "${command.data.name}" is not a slash command. It will be ignored.`,
-				)
+				Logger.warn(`Command "${command.data.name}" is not a slash command. It will be ignored.`)
 				continue
 			}
 
 			yield {
 				...command.data,
 				type: Discord.ApplicationCommandOptionType.Subcommand as const,
-				options: [
-					...getSubcommandOptions(
-						command.data.name,
-						command.data.options ?? [],
-					),
-				],
+				options: [...getSubcommandOptions(command.data.name, command.data.options ?? [])],
 			}
 		}
 	}

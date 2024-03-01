@@ -1,4 +1,4 @@
-import { Awaitable } from "../types.ts"
+import type { Awaitable } from "../types.ts"
 
 export async function callTimedAsync<T>(fn: () => Awaitable<T>) {
 	const start = Date.now()
