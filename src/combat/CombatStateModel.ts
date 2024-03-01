@@ -75,9 +75,9 @@ export class CombatStateModel {
 	}
 
 	get initiativeAttributeId() {
-		return Attributes.hasKey(this.data.initiativeAttributeId)
-			? this.data.initiativeAttributeId
-			: "Mobility"
+		return Attributes.hasKey(this.data.initiativeAttributeId) ?
+				this.data.initiativeAttributeId
+			:	"Mobility"
 	}
 
 	get members() {

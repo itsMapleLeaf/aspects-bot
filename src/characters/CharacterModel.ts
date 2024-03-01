@@ -62,11 +62,12 @@ export class CharacterModel {
 	static async getByPlayer(args: { guildId: string; playerId?: Nullish<string> }) {
 		console.log("getByPlayer", args)
 		const data = await db.character.findFirst({
-			where: args.playerId
-				? {
+			where:
+				args.playerId ?
+					{
 						AND: { guildId: args.guildId, player: { id: args.playerId } },
 					}
-				: {
+				:	{
 						guildId: args.guildId,
 					},
 			include: { player: true },
@@ -130,14 +131,15 @@ export class CharacterModel {
 		const input = {
 			...this.data,
 			health: this.health,
-			player: this.data.player
-				? {
+			player:
+				this.data.player ?
+					{
 						connectOrCreate: {
 							where: { id: this.data.player.id },
 							create: { id: this.data.player.id },
 						},
 					}
-				: undefined,
+				:	undefined,
 		} satisfies Omit<Prisma.CharacterUncheckedCreateInput, "id">
 
 		const data = await db.character.upsert({

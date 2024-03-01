@@ -75,9 +75,10 @@ export function useCombatTracker() {
 
 		const currentCharacterName = Discord.bold(state.currentMember.character.data.name)
 
-		const currentPlayerPing = state.currentMember.character.data.player?.id
-			? Discord.userMention(state.currentMember.character.data.player.id)
-			: ""
+		const currentPlayerPing =
+			state.currentMember.character.data.player?.id ?
+				Discord.userMention(state.currentMember.character.data.player.id)
+			:	""
 
 		const descriptionParts = state.members.map((member) => {
 			let name = member.character.data.name

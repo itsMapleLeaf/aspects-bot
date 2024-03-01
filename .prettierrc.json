@@ -1,5 +1,14 @@
 {
 	"semi": false,
 	"useTabs": true,
-	"printWidth": 100
+	"printWidth": 100,
+	"experimentalTernaries": true,
+	"overrides": [
+		{
+			"files": "pnpm-lock.yaml",
+			"options": {
+				"requirePragma": true
+			}
+		}
+	]
 }

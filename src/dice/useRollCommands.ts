@@ -77,7 +77,11 @@ export function useRollCommands() {
 
 			const fatigueDamage =
 				fatigueResults
-					?.map((n) => (n === 6 ? 2 : n >= 4 ? 1 : 0))
+					?.map((n) =>
+						n === 6 ? 2
+						: n >= 4 ? 1
+						: 0,
+					)
 					.reduce<number>((a, b) => a + b, 0) ?? 0
 
 			let title = "🎲 Roll Results"
@@ -105,9 +109,10 @@ export function useRollCommands() {
 
 			const diceLines = []
 
-			const actionDiceList = secondActionDie
-				? `2d${actionDie} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
-				: `1d${actionDie} -> **${actionResult}**`
+			const actionDiceList =
+				secondActionDie ?
+					`2d${actionDie} (${options.modify}) -> **${actionResult}** (${firstActionDie}, ${secondActionDie})`
+				:	`1d${actionDie} -> **${actionResult}**`
 			diceLines.push(`⚡ Action Dice: ${actionDiceList}`)
 
 			if (options.difficulty) {
@@ -116,7 +121,11 @@ export function useRollCommands() {
 
 			if (fatigueResults) {
 				const fatigueDieList = fatigueResults
-					.map((n) => (n === 6 ? `__**${n}**__` : n >= 4 ? `**${n}**` : n))
+					.map((n) =>
+						n === 6 ? `__**${n}**__`
+						: n >= 4 ? `**${n}**`
+						: n,
+					)
 					.join(", ")
 				diceLines.push(`💤 Fatigue Dice: ${fatigue}d6 -> ${fatigueDieList}`)
 			}

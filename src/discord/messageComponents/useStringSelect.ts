@@ -38,9 +38,9 @@ export function useStringSelect(args: {
 
 		getSelectedValues(message: Discord.Message): string[] {
 			const interaction = message.resolveComponent(args.customId)
-			return interaction?.type === Discord.ComponentType.StringSelect
-				? interaction.options.filter((o) => o.default).map((o) => o.value)
-				: []
+			return interaction?.type === Discord.ComponentType.StringSelect ?
+					interaction.options.filter((o) => o.default).map((o) => o.value)
+				:	[]
 		},
 	}
 }
