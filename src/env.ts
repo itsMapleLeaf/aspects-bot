@@ -1,16 +1,15 @@
-import "dotenv/config.js"
+import { config } from "dotenv"
+
+config({ path: ".env" })
+config({ path: ".env.local" })
+config({ path: `.env.${process.env.NODE_ENV || "development"}` })
+config({ path: `.env.local.${process.env.NODE_ENV || "development"}` })
 
 import * as z from "zod"
 
 const result = z
 	.object({
 		DISCORD_BOT_TOKEN: z.string(),
-		NOTION_API_KEY: z.string(),
-		NOTION_ASPECTS_DATABASE_ID: z.string(),
-		NOTION_RACES_DATABASE_ID: z.string(),
-		NOTION_ATTRIBUTES_DATABASE_ID: z.string(),
-		NOTION_GENERAL_SKILLS_DATABASE_ID: z.string(),
-		NOTION_ASPECT_SKILLS_DATABASE_ID: z.string(),
 	})
 	.safeParse(process.env)
 

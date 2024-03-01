@@ -129,8 +129,8 @@ export class CharacterModel {
 			player: this.data.player
 				? {
 						connectOrCreate: {
-							where: this.data.player,
-							create: this.data.player,
+							where: { id: this.data.player.id },
+							create: { id: this.data.player.id },
 						},
 					}
 				: undefined,
