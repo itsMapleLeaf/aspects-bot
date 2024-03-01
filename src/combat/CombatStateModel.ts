@@ -52,7 +52,6 @@ export class CombatStateModel {
 						},
 						create: {
 							characterId: character.data.id,
-							combatStateId: guildId,
 							initiative: roll(character.attributes[initiativeAttributeId]),
 						},
 					})),
@@ -98,7 +97,7 @@ export class CombatStateModel {
 	}
 
 	static async delete(guildId: string) {
-		await db.combatState.delete({
+		await db.combatState.deleteMany({
 			where: { guildId },
 		})
 	}

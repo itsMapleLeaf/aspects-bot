@@ -10,7 +10,7 @@
 - [x] track currency
 - [x] generate NPC names
 
-- [ ] /(health/fatigue/notes) (add/subtract) [amount] [character]?
+- [x] /(health/fatigue/notes) (add/subtract) [amount] [character]?
 
   - if character is not specified, use the player character, or show the select menu if GM
 

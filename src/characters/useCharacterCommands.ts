@@ -3,6 +3,12 @@ import { db } from "../db.ts"
 import { InteractionResponse } from "../discord/commands/InteractionResponse.ts"
 import { useGameMasterSlashCommand } from "../discord/commands/useGameMasterSlashCommand.ts"
 import { useGuildSlashCommand } from "../discord/commands/useGuildSlashCommand.ts"
+import type {
+	OptionRecord,
+	OptionValues,
+	optionTypes,
+} from "../discord/commands/useSlashCommand.ts"
+import { useStringSelect } from "../discord/messageComponents/useStringSelect.ts"
 import { Aspects, Attributes, Dice, Races } from "../game/tables.ts"
 import { exclude } from "../helpers/iterable.ts"
 import { randomItem } from "../helpers/random.ts"
@@ -150,27 +156,6 @@ export async function useCharacterCommands() {
 				return `Oops, I couldn't find that character.`
 			}
 
-			function requireNumber(input: string) {
-				const value = Number(input.trim())
-				if (isNaN(value)) {
-					throw new InteractionResponse(`${inlineCode(input)} is not a number.`)
-				}
-				return value
-			}
-
-			function adjust(value: number, input: string | null) {
-				if (!input) {
-					return undefined
-				}
-				if (input.startsWith("+")) {
-					return value + requireNumber(input.replace(/^\+/, ""))
-				}
-				if (input.startsWith("-")) {
-					return value - requireNumber(input.replace(/^-/, ""))
-				}
-				return requireNumber(input)
-			}
-
 			character = await character.update({
 				name: args.options.name ?? character.data.name,
 				raceId: args.options.race ?? character.data.raceId,
@@ -182,7 +167,7 @@ export async function useCharacterCommands() {
 				health: adjust(character.health, args.options.health),
 				fatigue: adjust(character.data.fatigue, args.options.fatigue),
 				currency: adjust(character.data.currency, args.options.notes),
-				playerId: args.options.player?.id,
+				...(args.options.player && { playerId: args.options.player.id }),
 			})
 
 			return {
@@ -192,6 +177,67 @@ export async function useCharacterCommands() {
 		},
 	})
 	//#endregion
+
+	useCharacterUpdateCommand({
+		name: "heal",
+		description: "Gain health",
+		options: (t) => ({
+			health: t.integer("The amount to heal", { required: true }),
+		}),
+		getSelectPlaceholder: (options) => `Select characters to heal for ${options.health} health`,
+		update: async (character, options) => {
+			const updated = await character.update({
+				health: character.health + requirePositiveInteger(options, "health"),
+			})
+			return `${character.data.name}: ${character.health}/${character.maxHealth} ⇒ ${updated.health}/${updated.maxHealth}`
+		},
+	})
+
+	useCharacterUpdateCommand({
+		name: "damage",
+		description: "Deal damage",
+		options: (t) => ({
+			damage: t.integer("The damage amount", { required: true }),
+		}),
+		getSelectPlaceholder: (options) => `Select characters to deal ${options.damage} damage`,
+		update: async (character, options) => {
+			const updated = await character.update({
+				health: character.health - requirePositiveInteger(options, "damage"),
+			})
+			return `${character.data.name}: ${character.health}/${character.maxHealth} ⇒ ${updated.health}/${updated.maxHealth}`
+		},
+	})
+
+	useCharacterUpdateCommand({
+		name: "fatigue",
+		description: "Adjust fatigue",
+		options: (t) => ({
+			fatigue: t.integer("The amount to adjust", { required: true }),
+		}),
+		getSelectPlaceholder: (options) => `Select characters to adjust fatigue by ${options.fatigue}`,
+		update: async (character, options) => {
+			const updated = await character.update({
+				fatigue: character.data.fatigue + options.fatigue,
+			})
+			return `${character.data.name}: ${character.data.fatigue} ⇒ ${updated.data.fatigue}`
+		},
+	})
+
+	useCharacterUpdateCommand({
+		name: "currency",
+		description: "Adjust currency",
+		options: (t) => ({
+			currency: t.integer("The amount to adjust", { required: true }),
+		}),
+		getSelectPlaceholder: (options) =>
+			`Select characters to adjust currency by ${options.currency}`,
+		update: async (character, options) => {
+			const updated = await character.update({
+				currency: character.data.currency + options.currency,
+			})
+			return `${character.data.name}: ${character.data.currency} ⇒ ${updated.data.currency}`
+		},
+	})
 
 	// let currentUpdates: Partial<Character> | undefined
 
@@ -278,4 +324,131 @@ export async function useCharacterCommands() {
 	// 		)
 	// 	},
 	// })
+}
+
+function useCharacterUpdateCommand<Options extends OptionRecord>({
+	name,
+	description,
+	options,
+	getSelectPlaceholder,
+	update,
+}: {
+	name: string
+	description: string
+	options: (t: typeof optionTypes) => Options
+	getSelectPlaceholder: (options: OptionValues<Options>) => string
+	update: (character: CharacterModel, options: OptionValues<Options>) => Promise<string>
+}) {
+	useGuildSlashCommand({
+		name,
+		description,
+		options,
+		run: async ({ options, guild, isGameMaster, getInteractingUserCharacter }) => {
+			if (!isGameMaster) {
+				const character = await getInteractingUserCharacter()
+				if (!character) {
+					throw new InteractionResponse(
+						"You don't have a character assigned. Ask the GM to assign one to you!",
+					)
+				}
+				return await update(character, options)
+			}
+
+			const characters = await db.character
+				.findMany({
+					where: { guildId: guild.id },
+				})
+				.then((characters) => characters.map((c) => new CharacterModel(c)))
+
+			currentOptions = options
+
+			return {
+				components: [
+					select.render({
+						options: characters.map((c) => ({
+							label: c.data.name,
+							value: c.data.id,
+						})),
+						minValues: 1,
+						maxValues: characters.length,
+						placeholder: getSelectPlaceholder(options),
+					}),
+				],
+			}
+		},
+	})
+
+	let currentOptions: OptionValues<Options> | undefined
+
+	const select = useStringSelect({
+		customId: `${name}:characters`,
+		async onSelect(interaction) {
+			if (!interaction.inGuild()) {
+				await interaction.update({
+					content: `This menu only works in servers.`,
+					embeds: [],
+					components: [],
+				})
+				return
+			}
+
+			if (!currentOptions) {
+				await interaction.update({
+					content: `Oops, it looks like this command expired. Try again.`,
+					embeds: [],
+					components: [],
+				})
+				return
+			}
+
+			const options = currentOptions
+			currentOptions = undefined
+
+			const characters = await db.character
+				.findMany({
+					where: { id: { in: interaction.values }, guildId: interaction.guildId },
+				})
+				.then((characters) => characters.map((c) => new CharacterModel(c)))
+
+			const lines = []
+			for (const character of characters) {
+				const output = await update(character, options)
+				lines.push(`- ${output}`)
+			}
+			await interaction.update({
+				content: `Updated characters:\n${lines.join("\n")}`,
+				embeds: [],
+				components: [],
+			})
+		},
+	})
+}
+
+function requireNumber(input: string) {
+	const value = Number(input.trim())
+	if (isNaN(value)) {
+		throw new InteractionResponse(`${inlineCode(input)} is not a number.`)
+	}
+	return value
+}
+
+function requirePositiveInteger<K extends string>(options: Record<K, number>, key: K) {
+	const value = options[key]
+	if (!(Number.isInteger(value) && value > 0)) {
+		throw new InteractionResponse(`${key} must be a positive integer.`)
+	}
+	return value
+}
+
+function adjust(value: number, input: string | null) {
+	if (!input) {
+		return undefined
+	}
+	if (input.startsWith("+")) {
+		return value + requireNumber(input.replace(/^\+/, ""))
+	}
+	if (input.startsWith("-")) {
+		return value - requireNumber(input.replace(/^-/, ""))
+	}
+	return requireNumber(input)
 }

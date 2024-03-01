@@ -13,8 +13,12 @@ export function useCombatCommands() {
 	useGameMasterSlashCommand({
 		name: "combat",
 		description: "Start combat",
-		async run() {
-			return setup.render()
+		async run({ guild }) {
+			const state = await CombatStateModel.get(guild.id)
+			if (state) {
+				return { ...(await tracker.render(state)), ephemeral: false }
+			}
+			return { ...(await setup.render()), ephemeral: false }
 		},
 	})
 
@@ -34,7 +38,7 @@ export function useCombatCommands() {
 					),
 				)
 
-			return await tracker.render(state)
+			return { ...(await tracker.render(state)), ephemeral: false }
 		},
 	})
 }

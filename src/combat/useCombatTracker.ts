@@ -81,7 +81,7 @@ export function useCombatTracker() {
 
 		const descriptionParts = state.members.map((member) => {
 			let name = member.character.data.name
-			if (state.currentMember === member) {
+			if (state.currentMember?.characterId === member.characterId) {
 				name = Discord.bold(name)
 			}
 

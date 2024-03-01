@@ -6,6 +6,7 @@ import { db } from "../db.ts"
 import * as GameTables from "../game/tables.ts"
 import { Attributes } from "../game/tables.ts"
 import { join, recordFromEntries } from "../helpers/iterable.ts"
+import { clamp } from "../helpers/math.ts"
 import type { Nullish } from "../types.ts"
 
 export type CharacterModelData = Character & {
@@ -78,7 +79,7 @@ export class CharacterModel {
 	}
 
 	get health() {
-		return this.data.health ?? this.maxHealth
+		return clamp(this.data.health ?? this.maxHealth, 0, this.maxHealth)
 	}
 
 	get attributes() {
@@ -145,28 +146,9 @@ export class CharacterModel {
 		return new CharacterModel(data)
 	}
 
-	async update({
-		playerId,
-		...input
-	}: Pick<Prisma.CharacterUncheckedUpdateInput, keyof Character> & {
-		playerId?: string | null
-	}) {
-		const data = await db.character.update({
-			where: { id: this.data.id },
-			data: {
-				...input,
-				...(playerId && {
-					player: {
-						connectOrCreate: {
-							where: { id: playerId },
-							create: { id: playerId },
-						},
-					},
-				}),
-			},
-			include: { player: true },
-		})
-		return new CharacterModel(data)
+	async update(newData: Partial<CharacterModelData>) {
+		const newModel = new CharacterModel({ ...this.data, ...newData })
+		return await newModel.save()
 	}
 
 	format() {

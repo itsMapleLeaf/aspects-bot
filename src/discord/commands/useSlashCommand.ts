@@ -1,6 +1,6 @@
 import * as Discord from "discord.js"
 import type { Override, Simplify, StrictOmit } from "../../types.ts"
-import { type CommandReply, type SlashCommand, commandStore } from "./CommandStore.ts"
+import { commandStore, type CommandReply, type SlashCommand } from "./CommandStore.ts"
 
 export function useSlashCommand<Options extends OptionRecord>(args: SlashCommandArgs<Options>) {
 	return commandStore.addCommand(defineSlashCommand<Options>(args))
@@ -49,7 +49,7 @@ export function defineSlashCommand<Options extends OptionRecord>(
 	}
 }
 
-type Option = {
+export type Option = {
 	data: (name: string) => Discord.ApplicationCommandOptionData
 	parse: (interaction: Discord.ChatInputCommandInteraction, name: string) => unknown
 	autocomplete?: AutocompleteFn
@@ -67,7 +67,7 @@ type AutocompleteFn<T extends string | number = string | number> = (
 
 type RequiredType<Condition, T> = Condition extends true ? NonNullable<T> : T | null
 
-const optionTypes = {
+export const optionTypes = {
 	string<const Required extends boolean, const Value extends string>(
 		description: string,
 		data?: Override<
