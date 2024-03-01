@@ -60,11 +60,15 @@ export class CharacterModel {
 	}
 
 	static async getByPlayer(args: { guildId: string; playerId?: Nullish<string> }) {
-		const data = await db.character.findUnique({
-			where: {
-				id: args.guildId,
-				...(args.playerId && { player: { id: args.playerId } }),
-			},
+		console.log("getByPlayer", args)
+		const data = await db.character.findFirst({
+			where: args.playerId
+				? {
+						AND: { guildId: args.guildId, player: { id: args.playerId } },
+					}
+				: {
+						guildId: args.guildId,
+					},
 			include: { player: true },
 		})
 		return data && new CharacterModel(data)
